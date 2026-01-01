@@ -1,0 +1,172 @@
+/* ============================================================
+   泰山河馬棒球分析系統 - 自訂樣式
+   版本: 1.4
+   說明: 補充 Tailwind CSS 無法涵蓋的自訂樣式
+   ============================================================ */
+
+/* ===== 捲動條樣式 ===== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* ===== 對話區塊捲動條 ===== */
+#conversation-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+#conversation-area::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+}
+
+#player-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+#player-list::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+}
+
+/* ===== 載入動畫 ===== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* ===== AI 回應打字效果（可選用） ===== */
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+.typing-cursor::after {
+  content: '|';
+  animation: blink 1s infinite;
+}
+
+/* ===== 快速分析按鈕 hover 效果 ===== */
+.quick-analyze-btn {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.quick-analyze-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.quick-analyze-btn:active {
+  transform: translateY(0);
+}
+
+/* ===== 球員列表項目 hover 效果 ===== */
+#player-list > div {
+  transition: transform 0.2s ease;
+}
+
+#player-list > div:hover {
+  transform: translateX(4px);
+}
+
+/* ===== 統計卡片 hover 效果 ===== */
+#team-stats > div {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#team-stats > div:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* ===== 輸入框 focus 效果 ===== */
+#question-input:focus {
+  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.2);
+}
+
+/* ===== 對話訊息動畫 ===== */
+#conversation-area > div {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== 重新載入按鈕旋轉動畫 ===== */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+/* ===== 響應式調整 ===== */
+@media (max-width: 640px) {
+  /* 手機版快速分析按鈕 */
+  .quick-analyze-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ===== 列印樣式 ===== */
+@media print {
+  header,
+  footer,
+  #loading-overlay,
+  #error-banner,
+  .quick-analyze-btn,
+  #question-input,
+  #btn-submit-question,
+  #btn-new-conversation,
+  #btn-refresh {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+  }
+
+  .shadow-md,
+  .shadow-lg {
+    box-shadow: none !important;
+  }
+}

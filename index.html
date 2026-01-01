@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>泰山河馬 U12 棒球分析系統</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- 自訂樣式 -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Tailwind 自訂設定 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#1e40af',    // 深藍色
+            secondary: '#3b82f6',  // 藍色
+            accent: '#f59e0b',     // 橘色（棒球主題）
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+  <!-- ===== 標題列 ===== -->
+  <header class="bg-primary text-white shadow-lg">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+      <h1 class="text-xl md:text-2xl font-bold flex items-center gap-2">
+        <span>⚾</span>
+        <span>泰山河馬 U12 棒球分析系統</span>
+      </h1>
+      <div id="header-buttons" class="flex items-center gap-2 hidden">
+        <button
+          id="btn-refresh"
+          class="bg-white text-primary px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition flex items-center gap-2"
+        >
+          <span id="refresh-icon">🔄</span>
+          <span class="hidden sm:inline">重新載入</span>
+        </button>
+        <button
+          id="btn-logout"
+          class="bg-red-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-600 transition flex items-center gap-2"
+        >
+          <span>🚪</span>
+          <span class="hidden sm:inline">登出</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== 登入區塊 ===== -->
+  <div id="login-section" class="min-h-[80vh] flex items-center justify-center">
+    <div class="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+      <div class="text-center mb-6">
+        <span class="text-6xl">⚾</span>
+        <h2 class="text-2xl font-bold text-gray-800 mt-4">泰山河馬 U12</h2>
+        <p class="text-gray-500 mt-2">棒球分析系統</p>
+      </div>
+
+      <div id="login-error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 hidden">
+        <span id="login-error-message">登入失敗</span>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label for="login-username" class="block text-sm font-medium text-gray-700 mb-1">帳號</label>
+          <input
+            type="text"
+            id="login-username"
+            class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            placeholder="請輸入帳號"
+            autocomplete="username"
+          >
+        </div>
+        <div>
+          <label for="login-password" class="block text-sm font-medium text-gray-700 mb-1">密碼</label>
+          <input
+            type="password"
+            id="login-password"
+            class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            placeholder="請輸入密碼"
+            autocomplete="current-password"
+          >
+        </div>
+        <button
+          id="btn-login"
+          class="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2"
+        >
+          <span>🔐</span>
+          <span>登入</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 主要內容區 ===== -->
+  <main id="main-content" class="container mx-auto px-4 py-6 hidden">
+
+    <!-- 載入中提示 -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+      <div class="bg-white rounded-lg p-6 flex flex-col items-center gap-4">
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+        <p class="text-gray-600" id="loading-text">載入中...</p>
+      </div>
+    </div>
+
+    <!-- 錯誤提示 -->
+    <div id="error-banner" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 hidden">
+      <div class="flex items-center gap-2">
+        <span>❌</span>
+        <span id="error-message">發生錯誤</span>
+        <button id="btn-close-error" class="ml-auto text-red-700 hover:text-red-900">&times;</button>
+      </div>
+    </div>
+
+    <!-- 上半部：球員列表 + 團隊統計/圖表 -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+
+      <!-- 左側：球員列表 -->
+      <div class="bg-white rounded-lg shadow-md p-4">
+        <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+          <span>📋</span>
+          <span>球員列表</span>
+        </h2>
+        <div id="player-list" class="space-y-2 max-h-96 overflow-y-auto">
+          <!-- 球員列表由 JS 動態填充 -->
+          <p class="text-gray-500 text-center py-4">載入中...</p>
+        </div>
+      </div>
+
+      <!-- 右側：團隊統計 + 圖表 -->
+      <div class="lg:col-span-2 space-y-6">
+
+        <!-- 團隊統計 -->
+        <div class="bg-white rounded-lg shadow-md p-4">
+          <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <span>📊</span>
+            <span>團隊統計</span>
+          </h2>
+          <div id="team-stats" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <!-- 統計卡片由 JS 動態填充 -->
+            <div class="text-center p-3 bg-gray-50 rounded-lg">
+              <p class="text-gray-500 text-sm">載入中...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 打擊率排行圖表 -->
+        <div class="bg-white rounded-lg shadow-md p-4">
+          <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <span>📈</span>
+            <span>打擊率排行</span>
+          </h2>
+          <div class="h-64">
+            <canvas id="batting-chart"></canvas>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 下半部：AI 教練助手 -->
+    <div class="bg-white rounded-lg shadow-md p-4">
+
+      <!-- 標題列 -->
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+          <span>🤖</span>
+          <span>AI 教練助手</span>
+        </h2>
+        <div class="flex items-center gap-2">
+          <span id="conversation-counter" class="text-sm text-gray-500">(0/100)</span>
+          <button
+            id="btn-new-conversation"
+            class="bg-accent text-white px-3 py-1 rounded-lg text-sm font-medium hover:bg-amber-600 transition flex items-center gap-1"
+          >
+            <span>🔄</span>
+            <span>開始新話題</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 快速分析按鈕 -->
+      <div class="mb-4">
+        <p class="text-sm text-gray-600 mb-2">快速分析：</p>
+        <div class="flex flex-wrap gap-2">
+          <button class="quick-analyze-btn bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-sm hover:bg-blue-200 transition" data-prompt="根據本季打擊和投球數據，分析誰是隊上的 MVP，請說明理由">
+            🏆 MVP分析
+          </button>
+          <button class="quick-analyze-btn bg-green-100 text-green-700 px-3 py-2 rounded-lg text-sm hover:bg-green-200 transition" data-prompt="分析哪位球員在本季進步最多，可以從哪些數據看出來">
+            📈 進步獎
+          </button>
+          <button class="quick-analyze-btn bg-purple-100 text-purple-700 px-3 py-2 rounded-lg text-sm hover:bg-purple-200 transition" data-prompt="根據各球員的打擊數據，建議最佳的打擊順序，並說明理由">
+            ⚾ 打線建議
+          </button>
+          <button class="quick-analyze-btn bg-orange-100 text-orange-700 px-3 py-2 rounded-lg text-sm hover:bg-orange-200 transition" data-prompt="分析球隊整體的優勢和弱點，建議接下來的訓練重點">
+            🎯 訓練重點
+          </button>
+        </div>
+      </div>
+
+      <!-- 自訂問題輸入 -->
+      <div class="mb-4">
+        <p class="text-sm text-gray-600 mb-2">自訂問題：</p>
+        <div class="flex gap-2">
+          <input
+            type="text"
+            id="question-input"
+            class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            placeholder="輸入您想問的問題..."
+          >
+          <button
+            id="btn-submit-question"
+            class="bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-1"
+          >
+            <span>🚀</span>
+            <span>送出</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 對話紀錄區 -->
+      <div class="border-t pt-4">
+        <p class="text-sm text-gray-600 mb-2 flex items-center gap-1">
+          <span>💬</span>
+          <span>對話紀錄：</span>
+        </p>
+        <div id="conversation-area" class="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto space-y-4">
+          <!-- 對話內容由 JS 動態填充 -->
+          <p class="text-gray-400 text-center py-8">點擊快速分析按鈕或輸入問題開始對話</p>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ===== 底部 ===== -->
+  <footer id="main-footer" class="bg-gray-200 text-gray-600 text-sm py-4 mt-8 hidden">
+    <div class="container mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+      <p>
+        <span>📅</span>
+        <span>資料更新時間：</span>
+        <span id="last-updated">--</span>
+      </p>
+      <p>Powered by Gemini AI | 泰山河馬棒球隊</p>
+    </div>
+  </footer>
+
+  <!-- 前端邏輯 -->
+  <script src="js/app.js"></script>
+
+</body>
+</html>
