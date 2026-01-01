@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 1.5 - 新增認證功能
+// 版本: 1.6 - 新增球員詳細資料 Modal
 // ============================================================
 
 // API 基礎 URL
@@ -23,7 +23,8 @@ let appState = {
   conversationTurn: 0,     // 當前對話次數
   battingChart: null,      // Chart.js 圖表實例
   token: null,             // 認證 Token
-  isLoggedIn: false        // 登入狀態
+  isLoggedIn: false,       // 登入狀態
+  selectedPlayer: null     // 當前選取的球員 (用於 Modal)
 };
 
 // ============================================================
@@ -120,6 +121,19 @@ function cacheDOMElements() {
 
   // 其他
   DOM.btnRefresh = document.getElementById('btn-refresh');
+
+  // 球員 Modal
+  DOM.playerModal = document.getElementById('player-modal');
+  DOM.btnCloseModal = document.getElementById('btn-close-modal');
+  DOM.modalPlayerNumber = document.getElementById('modal-player-number');
+  DOM.modalPlayerName = document.getElementById('modal-player-name');
+  DOM.modalBasicInfo = document.getElementById('modal-basic-info');
+  DOM.modalBattingStats = document.getElementById('modal-batting-stats');
+  DOM.modalPitchingSection = document.getElementById('modal-pitching-section');
+  DOM.modalPitchingStats = document.getElementById('modal-pitching-stats');
+  DOM.modalFieldingSection = document.getElementById('modal-fielding-section');
+  DOM.modalFieldingStats = document.getElementById('modal-fielding-stats');
+  DOM.btnModalAskAI = document.getElementById('btn-modal-ask-ai');
 }
 
 /**
@@ -165,6 +179,19 @@ function bindEvents() {
       onQuickAnalysis(prompt);
     });
   });
+
+  // Modal 關閉按鈕
+  DOM.btnCloseModal.addEventListener('click', hidePlayerModal);
+
+  // 點擊 Modal 背景關閉
+  DOM.playerModal.addEventListener('click', (e) => {
+    if (e.target === DOM.playerModal) {
+      hidePlayerModal();
+    }
+  });
+
+  // Modal 內的 AI 分析按鈕
+  DOM.btnModalAskAI.addEventListener('click', onModalAskAI);
 }
 
 // ============================================================
@@ -492,13 +519,13 @@ function renderPlayerList() {
     return;
   }
 
-  const html = players.map(player => {
+  const html = players.map((player, index) => {
     const number = player['背號'] || '--';
     const name = player['姓名'] || '未知';
     const position = player['守位'] || '';
 
     return `
-      <div class="flex items-center gap-3 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition cursor-pointer">
+      <div class="player-item flex items-center gap-3 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition cursor-pointer" data-player-index="${index}">
         <span class="bg-primary text-white text-sm font-bold w-8 h-8 rounded-full flex items-center justify-center">
           ${number}
         </span>
@@ -511,6 +538,14 @@ function renderPlayerList() {
   }).join('');
 
   DOM.playerList.innerHTML = html;
+
+  // 綁定球員點擊事件
+  document.querySelectorAll('.player-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const index = parseInt(item.getAttribute('data-player-index'));
+      showPlayerModal(index);
+    });
+  });
 }
 
 /**
@@ -658,6 +693,164 @@ function renderConversation() {
 
   // 捲動到底部
   DOM.conversationArea.scrollTop = DOM.conversationArea.scrollHeight;
+}
+
+// ============================================================
+// 球員 Modal 功能
+// ============================================================
+
+/**
+ * 顯示球員詳細資料 Modal
+ * @param {number} playerIndex - 球員在陣列中的索引
+ */
+function showPlayerModal(playerIndex) {
+  const players = appState.data?.sheets?.players?.data || [];
+  const player = players[playerIndex];
+
+  if (!player) return;
+
+  // 儲存選取的球員
+  appState.selectedPlayer = player;
+
+  // 填充基本資料
+  const number = player['背號'] || '--';
+  const name = player['姓名'] || '未知';
+
+  DOM.modalPlayerNumber.textContent = number;
+  DOM.modalPlayerName.textContent = name;
+
+  // 基本資料
+  const basicInfoFields = [
+    { label: '守位', value: player['守位'] },
+    { label: '生日', value: player['生日'] },
+    { label: '身高', value: player['身高'] ? `${player['身高']} cm` : null },
+    { label: '體重', value: player['體重'] ? `${player['體重']} kg` : null },
+    { label: '投打', value: player['投打'] },
+    { label: '學校', value: player['就讀學校'] }
+  ].filter(f => f.value);
+
+  DOM.modalBasicInfo.innerHTML = basicInfoFields.map(f => `
+    <div class="bg-white p-2 rounded">
+      <p class="text-gray-500 text-xs">${f.label}</p>
+      <p class="font-medium">${f.value}</p>
+    </div>
+  `).join('') || '<p class="text-gray-400">無資料</p>';
+
+  // 打擊數據
+  const batting = appState.data?.sheets?.batting?.data || [];
+  const playerBatting = batting.find(b => b['背號'] === number || b['姓名'] === name);
+
+  if (playerBatting) {
+    const battingFields = [
+      { label: '打擊率', value: playerBatting['打擊率'] },
+      { label: '出賽', value: playerBatting['出賽'] },
+      { label: '打席', value: playerBatting['打席'] },
+      { label: '打數', value: playerBatting['打數'] },
+      { label: '安打', value: playerBatting['安打'] },
+      { label: '二壘打', value: playerBatting['二壘打'] },
+      { label: '三壘打', value: playerBatting['三壘打'] },
+      { label: '全壘打', value: playerBatting['全壘打'] },
+      { label: '打點', value: playerBatting['打點'] },
+      { label: '得分', value: playerBatting['得分'] },
+      { label: '四壞球', value: playerBatting['四壞球'] },
+      { label: '三振', value: playerBatting['三振'] },
+      { label: '盜壘', value: playerBatting['盜壘'] },
+      { label: '上壘率', value: playerBatting['上壘率'] }
+    ].filter(f => f.value !== undefined && f.value !== '');
+
+    DOM.modalBattingStats.innerHTML = battingFields.map(f => `
+      <div class="bg-white p-2 rounded text-center">
+        <p class="text-gray-500 text-xs">${f.label}</p>
+        <p class="font-bold text-blue-600">${f.value}</p>
+      </div>
+    `).join('') || '<p class="text-gray-400">無資料</p>';
+  } else {
+    DOM.modalBattingStats.innerHTML = '<p class="text-gray-400">無打擊資料</p>';
+  }
+
+  // 投球數據
+  const pitching = appState.data?.sheets?.pitching?.data || [];
+  const playerPitching = pitching.find(p => p['背號'] === number || p['姓名'] === name);
+
+  if (playerPitching) {
+    DOM.modalPitchingSection.classList.remove('hidden');
+    const pitchingFields = [
+      { label: '出賽', value: playerPitching['出賽'] },
+      { label: '投球局數', value: playerPitching['投球局數'] },
+      { label: '勝', value: playerPitching['勝'] },
+      { label: '敗', value: playerPitching['敗'] },
+      { label: '防禦率', value: playerPitching['防禦率'] },
+      { label: '三振', value: playerPitching['三振'] },
+      { label: '四壞球', value: playerPitching['四壞球'] },
+      { label: '被安打', value: playerPitching['被安打'] },
+      { label: '失分', value: playerPitching['失分'] },
+      { label: '自責分', value: playerPitching['自責分'] }
+    ].filter(f => f.value !== undefined && f.value !== '');
+
+    DOM.modalPitchingStats.innerHTML = pitchingFields.map(f => `
+      <div class="bg-white p-2 rounded text-center">
+        <p class="text-gray-500 text-xs">${f.label}</p>
+        <p class="font-bold text-green-600">${f.value}</p>
+      </div>
+    `).join('') || '<p class="text-gray-400">無資料</p>';
+  } else {
+    DOM.modalPitchingSection.classList.add('hidden');
+  }
+
+  // 守備數據
+  const fielding = appState.data?.sheets?.fielding?.data || [];
+  const playerFielding = fielding.find(f => f['背號'] === number || f['姓名'] === name);
+
+  if (playerFielding) {
+    DOM.modalFieldingSection.classList.remove('hidden');
+    const fieldingFields = [
+      { label: '守位', value: playerFielding['守位'] },
+      { label: '出賽', value: playerFielding['出賽'] },
+      { label: '刺殺', value: playerFielding['刺殺'] },
+      { label: '助殺', value: playerFielding['助殺'] },
+      { label: '失誤', value: playerFielding['失誤'] },
+      { label: '守備率', value: playerFielding['守備率'] }
+    ].filter(f => f.value !== undefined && f.value !== '');
+
+    DOM.modalFieldingStats.innerHTML = fieldingFields.map(f => `
+      <div class="bg-white p-2 rounded text-center">
+        <p class="text-gray-500 text-xs">${f.label}</p>
+        <p class="font-bold text-orange-600">${f.value}</p>
+      </div>
+    `).join('') || '<p class="text-gray-400">無資料</p>';
+  } else {
+    DOM.modalFieldingSection.classList.add('hidden');
+  }
+
+  // 顯示 Modal
+  DOM.playerModal.classList.remove('hidden');
+}
+
+/**
+ * 隱藏球員詳細資料 Modal
+ */
+function hidePlayerModal() {
+  DOM.playerModal.classList.add('hidden');
+  appState.selectedPlayer = null;
+}
+
+/**
+ * Modal 內的 AI 分析按鈕事件
+ */
+function onModalAskAI() {
+  const player = appState.selectedPlayer;
+  if (!player) return;
+
+  const name = player['姓名'] || '此球員';
+  const prompt = `請分析 ${name} 的整體表現，包括打擊、投球（如有）和守備能力，並給予訓練建議。`;
+
+  // 關閉 Modal
+  hidePlayerModal();
+
+  // 開始新話題並送出分析請求
+  startNewConversation();
+  DOM.questionInput.value = prompt;
+  onSubmitQuestion();
 }
 
 // ============================================================
