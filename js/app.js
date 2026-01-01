@@ -495,7 +495,7 @@ function renderPlayerList() {
   const html = players.map(player => {
     const number = player['背號'] || '--';
     const name = player['姓名'] || '未知';
-    const position = player['守備位置'] || '';
+    const position = player['守位'] || '';
 
     return `
       <div class="flex items-center gap-3 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition cursor-pointer">
@@ -517,18 +517,21 @@ function renderPlayerList() {
  * 渲染團隊統計
  */
 function renderTeamStats() {
-  const games = appState.data?.sheets?.games?.data || [];
+  const rawGames = appState.data?.sheets?.games?.data || [];
   const batting = appState.data?.sheets?.batting?.data || [];
+
+  // 過濾空白比賽紀錄（只保留有對手資料的紀錄）
+  const games = rawGames.filter(g => g['對手'] && g['對手'].trim() !== '');
 
   // 計算統計
   const totalGames = games.length;
-  const wins = games.filter(g => g['勝敗'] === '勝').length;
-  const losses = games.filter(g => g['勝敗'] === '敗').length;
-  const ties = games.filter(g => g['勝敗'] === '和').length;
+  const wins = games.filter(g => g['結果'] === '勝').length;
+  const losses = games.filter(g => g['結果'] === '敗').length;
+  const ties = games.filter(g => g['結果'] === '和').length;
 
   // 總得分/失分
   const totalRuns = games.reduce((sum, g) => sum + (parseInt(g['我方得分']) || 0), 0);
-  const totalRunsAgainst = games.reduce((sum, g) => sum + (parseInt(g['對手得分']) || 0), 0);
+  const totalRunsAgainst = games.reduce((sum, g) => sum + (parseInt(g['對方得分']) || 0), 0);
 
   // 團隊打擊率（所有球員平均）
   const avgList = batting.map(b => parseFloat(b['打擊率']) || 0).filter(v => v > 0);
