@@ -244,6 +244,75 @@
 
   </main>
 
+  <!-- ===== 球員詳細資料 Modal ===== -->
+  <div id="player-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+      <!-- Modal 標題 -->
+      <div class="bg-primary text-white p-4 rounded-t-lg flex justify-between items-center sticky top-0">
+        <h3 class="text-lg font-bold flex items-center gap-2">
+          <span id="modal-player-number" class="bg-white text-primary text-sm font-bold w-8 h-8 rounded-full flex items-center justify-center">--</span>
+          <span id="modal-player-name">球員名稱</span>
+        </h3>
+        <button id="btn-close-modal" class="text-white hover:text-gray-200 text-2xl leading-none">&times;</button>
+      </div>
+
+      <!-- Modal 內容 -->
+      <div class="p-4 space-y-4">
+        <!-- 基本資料 -->
+        <div class="bg-gray-50 rounded-lg p-4">
+          <h4 class="font-bold text-gray-700 mb-2 flex items-center gap-2">
+            <span>👤</span>
+            <span>基本資料</span>
+          </h4>
+          <div id="modal-basic-info" class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+            <!-- 由 JS 動態填充 -->
+          </div>
+        </div>
+
+        <!-- 打擊數據 -->
+        <div class="bg-blue-50 rounded-lg p-4">
+          <h4 class="font-bold text-blue-700 mb-2 flex items-center gap-2">
+            <span>⚾</span>
+            <span>打擊數據</span>
+          </h4>
+          <div id="modal-batting-stats" class="grid grid-cols-3 md:grid-cols-4 gap-2 text-sm">
+            <!-- 由 JS 動態填充 -->
+          </div>
+        </div>
+
+        <!-- 投球數據 -->
+        <div id="modal-pitching-section" class="bg-green-50 rounded-lg p-4 hidden">
+          <h4 class="font-bold text-green-700 mb-2 flex items-center gap-2">
+            <span>🎯</span>
+            <span>投球數據</span>
+          </h4>
+          <div id="modal-pitching-stats" class="grid grid-cols-3 md:grid-cols-4 gap-2 text-sm">
+            <!-- 由 JS 動態填充 -->
+          </div>
+        </div>
+
+        <!-- 守備數據 -->
+        <div id="modal-fielding-section" class="bg-orange-50 rounded-lg p-4 hidden">
+          <h4 class="font-bold text-orange-700 mb-2 flex items-center gap-2">
+            <span>🧤</span>
+            <span>守備數據</span>
+          </h4>
+          <div id="modal-fielding-stats" class="grid grid-cols-3 md:grid-cols-4 gap-2 text-sm">
+            <!-- 由 JS 動態填充 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal 底部 -->
+      <div class="bg-gray-100 p-4 rounded-b-lg flex justify-end">
+        <button id="btn-modal-ask-ai" class="bg-accent text-white px-4 py-2 rounded-lg font-medium hover:bg-amber-600 transition flex items-center gap-2">
+          <span>🤖</span>
+          <span>請 AI 分析此球員</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== 底部 ===== -->
   <footer id="main-footer" class="bg-gray-200 text-gray-600 text-sm py-4 mt-8 hidden">
     <div class="container mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
