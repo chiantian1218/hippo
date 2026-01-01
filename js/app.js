@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 1.6 - 新增球員詳細資料 Modal
+// 版本: 1.7 - 新增 Markdown 解析支援
 // ============================================================
 
 // API 基礎 URL
@@ -676,14 +676,21 @@ function renderConversation() {
     const bgColor = isUser ? 'bg-blue-50' : 'bg-green-50';
     const borderColor = isUser ? 'border-blue-200' : 'border-green-200';
 
-    // 處理換行
-    const content = msg.content.replace(/\n/g, '<br>');
+    // 使用者訊息：簡單處理換行
+    // AI 回應：使用 marked.js 解析 Markdown
+    let content;
+    if (isUser) {
+      content = msg.content.replace(/\n/g, '<br>');
+    } else {
+      // 使用 marked 解析 Markdown
+      content = marked.parse(msg.content);
+    }
 
     return `
       <div class="${bgColor} ${borderColor} border rounded-lg p-3">
         <div class="flex items-start gap-2">
           <span class="text-lg">${icon}</span>
-          <div class="flex-1 text-sm text-gray-700">${content}</div>
+          <div class="flex-1 text-sm text-gray-700 markdown-content">${content}</div>
         </div>
       </div>
     `;
