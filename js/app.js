@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.2.2 - 折線圖加入 crosshair 模式
+// 版本: 2.2.3 - crosshair 垂直線 + 移除 U12/更新時間/Gemini
 // ============================================================
 
 // API 基礎 URL
@@ -337,6 +337,30 @@ const Charts = {
   winLoss: null
 };
 
+// 垂直虛線 Crosshair Plugin
+const crosshairPlugin = {
+  id: 'crosshair',
+  afterDraw: (chart) => {
+    if (chart.tooltip?._active?.length) {
+      const ctx = chart.ctx;
+      const activePoint = chart.tooltip._active[0];
+      const x = activePoint.element.x;
+      const topY = chart.scales.y.top;
+      const bottomY = chart.scales.y.bottom;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(x, topY);
+      ctx.lineTo(x, bottomY);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(156, 163, 175, 0.5)';
+      ctx.setLineDash([5, 5]);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+};
+
 // Token 儲存鍵名
 const TOKEN_STORAGE_KEY = 'baseball_auth_token';
 
@@ -500,10 +524,6 @@ function initIcons() {
       span.innerHTML = Icons[iconName];
     }
   });
-
-  // Footer icons
-  const footerCalendarIcon = document.getElementById('footer-calendar-icon');
-  if (footerCalendarIcon) footerCalendarIcon.innerHTML = Icons.calendar;
 
   // Modal icons
   const modalUserIcon = document.getElementById('modal-user-icon');
@@ -757,7 +777,6 @@ function cacheDOMElements() {
   DOM.playerList = document.getElementById('player-list');
   DOM.teamStats = document.getElementById('team-stats');
   DOM.battingChart = document.getElementById('batting-chart');
-  DOM.lastUpdated = document.getElementById('last-updated');
 
   // AI 對話
   DOM.conversationArea = document.getElementById('conversation-area');
@@ -1070,12 +1089,6 @@ async function fetchData() {
     renderTeamStats();
     renderAllCharts();
 
-    // 更新時間
-    if (data.fetchedAt) {
-      const date = new Date(data.fetchedAt);
-      DOM.lastUpdated.textContent = date.toLocaleString('zh-TW');
-    }
-
     hideLoading();
 
   } catch (error) {
@@ -1372,6 +1385,7 @@ function renderBattingOBPChart() {
   try {
     Charts.battingOBP = new Chart(ctx, {
       type: 'line',
+      plugins: [crosshairPlugin],
       data: {
         labels: labels,
         datasets: [
@@ -1474,11 +1488,15 @@ function renderExtraBaseChart() {
     const doubles = getIntField(b, '二壘打');
     const triples = getIntField(b, '三壘打');
     const homers = getIntField(b, '全壘打');
-    return Math.max(0, hits - doubles - triples - homers);  // 一壘打
+    const singles = Math.max(0, hits - doubles - triples - homers);
+    console.log(`[ExtraBase] ${getField(b, '姓名')}: 安打=${hits}, 2B=${doubles}, 3B=${triples}, HR=${homers}, 1B=${singles}`);
+    return singles;
   });
   const doublesData = sorted.map(b => getIntField(b, '二壘打'));
   const triplesData = sorted.map(b => getIntField(b, '三壘打'));
   const homersData = sorted.map(b => getIntField(b, '全壘打'));
+
+  console.log('[ExtraBase] singlesData:', singlesData);
 
   destroyChart('extraBase');
 
