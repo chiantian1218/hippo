@@ -96,6 +96,40 @@ function getField(obj, fieldName) {
     }
   }
 
+  // 部分匹配（欄位名稱包含目標字串）
+  for (const key of Object.keys(obj)) {
+    if (key.includes(fieldName) || fieldName.includes(key)) {
+      return obj[key];
+    }
+  }
+
+  // 別名匹配
+  const aliases = {
+    '打擊率': ['AVG', 'avg', '打率', 'BA'],
+    '上壘率': ['OBP', 'obp', '上壘'],
+    '防禦率': ['ERA', 'era', '自責分率'],
+    '投球局數': ['IP', 'ip', '局數', '投球局'],
+    '守備率': ['FLD%', 'fld', 'FPCT', '守備'],
+    '姓名': ['name', '球員', '選手'],
+    '背號': ['number', '號碼', '球衣號'],
+    '守位': ['position', 'pos', '位置'],
+    '三振': ['K', 'SO', 'strikeout'],
+    '四壞球': ['BB', 'walk', '保送'],
+    '二壘打': ['2B', '2H', 'double'],
+    '三壘打': ['3B', '3H', 'triple'],
+    '全壘打': ['HR', 'homerun', '本壘打'],
+    '盜壘': ['SB', 'steal', '盜壘成功']
+  };
+
+  const possibleAliases = aliases[fieldName] || [];
+  for (const alias of possibleAliases) {
+    for (const key of Object.keys(obj)) {
+      if (key.includes(alias) || key.toLowerCase().includes(alias.toLowerCase())) {
+        return obj[key];
+      }
+    }
+  }
+
   return '';
 }
 
@@ -241,7 +275,8 @@ function toggleTheme() {
  */
 function updateChartsTheme(theme) {
   const textColor = theme === 'light' ? '#1e293b' : '#f3f4f6';
-  const gridColor = theme === 'light' ? '#e2e8f0' : '#374151';
+  const textSecondary = theme === 'light' ? '#64748b' : '#9ca3af';
+  const gridColor = theme === 'light' ? 'rgba(226, 232, 240, 0.8)' : 'rgba(55, 65, 81, 0.5)';
 
   // 更新全域預設值
   if (window.Chart) {
@@ -250,15 +285,32 @@ function updateChartsTheme(theme) {
   }
 
   // 重新渲染現有圖表
-  Object.values(Charts).forEach(chart => {
+  Object.entries(Charts).forEach(([key, chart]) => {
     if (chart) {
       chart.options.scales = chart.options.scales || {};
-      Object.values(chart.options.scales).forEach(scale => {
-        scale.ticks = scale.ticks || {};
-        scale.ticks.color = textColor;
-        scale.grid = scale.grid || {};
-        scale.grid.color = gridColor;
-      });
+
+      // 處理雷達圖的特殊結構
+      if (key === 'radar' && chart.options.scales.r) {
+        const r = chart.options.scales.r;
+        r.ticks = r.ticks || {};
+        r.ticks.color = textSecondary;
+        r.ticks.backdropColor = 'transparent';
+        r.grid = r.grid || {};
+        r.grid.color = gridColor;
+        r.angleLines = r.angleLines || {};
+        r.angleLines.color = gridColor;
+        r.pointLabels = r.pointLabels || {};
+        r.pointLabels.color = textColor;
+      } else {
+        // 處理一般圖表
+        Object.values(chart.options.scales).forEach(scale => {
+          scale.ticks = scale.ticks || {};
+          scale.ticks.color = textSecondary;
+          scale.grid = scale.grid || {};
+          scale.grid.color = gridColor;
+        });
+      }
+
       if (chart.options.plugins && chart.options.plugins.legend) {
         chart.options.plugins.legend.labels = chart.options.plugins.legend.labels || {};
         chart.options.plugins.legend.labels.color = textColor;
@@ -1143,13 +1195,34 @@ async function analyzeWithAI(question, isNewTopic = false) {
         logout();
         return;
       }
-      throw new Error(`HTTP 錯誤: ${response.status}`);
+      // 429 表示速率限制
+      if (response.status === 429) {
+        throw new Error('請求過於頻繁，請稍候 30 秒後再試');
+      }
+      // 500 伺服器錯誤 - 可能是 API 配額或暫時性問題
+      if (response.status === 500) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = errorData.error || '';
+        if (errorMsg.includes('quota') || errorMsg.includes('limit') || errorMsg.includes('429')) {
+          throw new Error('AI 服務暫時繁忙，請稍候 1-2 分鐘後再試');
+        }
+        if (errorMsg.includes('API') || errorMsg.includes('Gemini')) {
+          throw new Error('AI 服務暫時無法使用，請稍後再試');
+        }
+        throw new Error('伺服器暫時忙碌，請稍後再試');
+      }
+      throw new Error(`連線錯誤 (${response.status})，請稍後再試`);
     }
 
     const result = await response.json();
 
     if (!result.success) {
-      throw new Error(result.error || 'AI 分析失敗');
+      const errMsg = result.error || 'AI 分析失敗';
+      // 檢查是否為配額限制相關錯誤
+      if (errMsg.includes('quota') || errMsg.includes('limit') || errMsg.includes('429')) {
+        throw new Error('AI 服務暫時繁忙，請稍候 1-2 分鐘後再試');
+      }
+      throw new Error(errMsg);
     }
 
     // 將 AI 回應加入歷史
@@ -1165,7 +1238,9 @@ async function analyzeWithAI(question, isNewTopic = false) {
     appState.conversationTurn--;
     renderConversation();
 
-    showError(`AI 分析失敗: ${error.message}`);
+    // 顯示友善的錯誤訊息
+    const friendlyMsg = error.message.includes('請') ? error.message : `AI 分析失敗: ${error.message}`;
+    showError(friendlyMsg);
     console.error('analyzeWithAI error:', error);
   }
 }
@@ -1321,7 +1396,15 @@ function destroyChart(chartName) {
  */
 function renderBattingOBPChart() {
   const batting = appState.data?.sheets?.batting?.data || [];
-  if (batting.length === 0) return;
+
+  // 調試：顯示原始資料結構
+  if (batting.length > 0) {
+    console.log('打擊資料欄位:', Object.keys(batting[0]));
+    console.log('第一筆打擊資料:', batting[0]);
+  } else {
+    console.warn('renderBattingOBPChart: 無打擊資料');
+    return;
+  }
 
   // 取前 8 名有打擊率的球員 (使用安全取值函數)
   const sorted = [...batting]
@@ -1331,7 +1414,13 @@ function renderBattingOBPChart() {
 
   // 若沒有資料則不渲染
   if (sorted.length === 0) {
-    console.warn('renderBattingOBPChart: 無有效打擊率資料');
+    console.warn('renderBattingOBPChart: 無有效打擊率資料，檢查欄位名稱是否正確');
+    // 嘗試顯示可能的欄位名稱
+    if (batting.length > 0) {
+      const keys = Object.keys(batting[0]);
+      const avgLike = keys.filter(k => k.includes('打擊') || k.includes('AVG') || k.includes('avg'));
+      console.log('可能的打擊率欄位:', avgLike);
+    }
     return;
   }
 
@@ -1503,7 +1592,15 @@ function renderExtraBaseChart() {
  */
 function renderERAChart() {
   const pitching = appState.data?.sheets?.pitching?.data || [];
-  if (pitching.length === 0) return;
+
+  // 調試：顯示原始資料結構
+  if (pitching.length > 0) {
+    console.log('投手資料欄位:', Object.keys(pitching[0]));
+    console.log('第一筆投手資料:', pitching[0]);
+  } else {
+    console.warn('renderERAChart: 無投手資料');
+    return;
+  }
 
   // 依防禦率排序（取有投球局數的前 8 名，防禦率越低越好）
   const sorted = [...pitching]
@@ -1513,7 +1610,12 @@ function renderERAChart() {
 
   // 若沒有資料則不渲染
   if (sorted.length === 0) {
-    console.warn('renderERAChart: 無有效投手資料');
+    console.warn('renderERAChart: 無有效投手資料，檢查欄位名稱');
+    if (pitching.length > 0) {
+      const keys = Object.keys(pitching[0]);
+      const ipLike = keys.filter(k => k.includes('投球') || k.includes('局數') || k.includes('IP'));
+      console.log('可能的投球局數欄位:', ipLike);
+    }
     return;
   }
 
@@ -1659,7 +1761,15 @@ function renderKBBChart() {
  */
 function renderFieldingPctChart() {
   const fielding = appState.data?.sheets?.fielding?.data || [];
-  if (fielding.length === 0) return;
+
+  // 調試：顯示原始資料結構
+  if (fielding.length > 0) {
+    console.log('守備資料欄位:', Object.keys(fielding[0]));
+    console.log('第一筆守備資料:', fielding[0]);
+  } else {
+    console.warn('renderFieldingPctChart: 無守備資料');
+    return;
+  }
 
   // 依守備率排序（取前 8 名）
   const sorted = [...fielding]
@@ -1669,7 +1779,12 @@ function renderFieldingPctChart() {
 
   // 若沒有資料則不渲染
   if (sorted.length === 0) {
-    console.warn('renderFieldingPctChart: 無有效守備資料');
+    console.warn('renderFieldingPctChart: 無有效守備資料，檢查欄位名稱');
+    if (fielding.length > 0) {
+      const keys = Object.keys(fielding[0]);
+      const fldLike = keys.filter(k => k.includes('守備') || k.includes('率') || k.includes('FLD'));
+      console.log('可能的守備率欄位:', fldLike);
+    }
     return;
   }
 
