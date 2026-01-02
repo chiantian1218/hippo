@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.3.0 - 無資料時顯示提示訊息
+// 版本: 2.4.0 - 桌面版左側 Tab 導航
 // ============================================================
 
 // API 基礎 URL
@@ -440,6 +440,9 @@ function init() {
   // 初始化圖表 Tab 切換
   initChartTabs();
 
+  // 初始化桌面版左側 Tab 導航
+  initDesktopTabs();
+
   // 初始化手機版導航
   initMobileNav();
 
@@ -553,6 +556,15 @@ function initIcons() {
 
   const mobAiIcon = document.getElementById('mob-ai-icon');
   if (mobAiIcon) mobAiIcon.innerHTML = Icons.cpu;
+
+  // Desktop sidebar icons
+  const sidebarIcons = document.querySelectorAll('.sidebar-icon');
+  sidebarIcons.forEach(icon => {
+    const iconName = icon.getAttribute('data-icon');
+    if (iconName && Icons[iconName]) {
+      icon.innerHTML = Icons[iconName];
+    }
+  });
 }
 
 /**
@@ -626,6 +638,70 @@ function initChartTabs() {
 }
 
 /**
+ * 初始化桌面版左側 Tab 導航
+ */
+function initDesktopTabs() {
+  const desktopTabs = document.querySelectorAll('.desktop-tab');
+  const sections = document.querySelectorAll('.desktop-section');
+  let currentDesktopSection = 'players';  // 預設顯示球員列表
+
+  // 切換到指定區塊
+  function switchToSection(sectionName) {
+    currentDesktopSection = sectionName;
+
+    // 更新 tab 狀態
+    desktopTabs.forEach(tab => {
+      if (tab.getAttribute('data-section') === sectionName) {
+        tab.classList.add('active');
+      } else {
+        tab.classList.remove('active');
+      }
+    });
+
+    // 切換區塊顯示 (僅在桌面版 lg 以上)
+    if (window.innerWidth >= 1024) {  // lg breakpoint
+      sections.forEach(section => {
+        const name = section.id.replace('section-', '');
+        if (name === sectionName) {
+          section.classList.remove('hidden');
+          section.classList.add('active');
+          section.style.animation = 'fadeIn 0.25s ease-out';
+        } else {
+          section.classList.add('hidden');
+          section.classList.remove('active');
+        }
+      });
+    }
+  }
+
+  // 綁定 click 事件
+  desktopTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const targetSection = tab.getAttribute('data-section');
+      switchToSection(targetSection);
+    });
+  });
+
+  // 初始化：在桌面版顯示第一個區塊
+  function initDesktopView() {
+    if (window.innerWidth >= 1024) {
+      switchToSection(currentDesktopSection);
+    }
+  }
+
+  // 監聽視窗大小變化
+  window.addEventListener('resize', () => {
+    if (window.innerWidth >= 1024) {
+      // 切換到桌面版時，恢復上次選擇的區塊
+      switchToSection(currentDesktopSection);
+    }
+  });
+
+  // 初始檢查
+  initDesktopView();
+}
+
+/**
  * 初始化手機版底部導航
  */
 function initMobileNav() {
@@ -638,6 +714,8 @@ function initMobileNav() {
   // 檢查是否為手機版
   function checkMobileView() {
     const isMobile = window.innerWidth < 640;  // sm breakpoint
+    const isTablet = window.innerWidth >= 640 && window.innerWidth < 1024;  // sm to lg
+    const isDesktop = window.innerWidth >= 1024;  // lg breakpoint
 
     if (isMobile) {
       mobileNav.classList.remove('hidden');
@@ -651,12 +729,16 @@ function initMobileNav() {
       });
       currentSectionIndex = 0;
       updateActiveTab(sectionOrder[0]);
-    } else {
+    } else if (isTablet) {
       mobileNav.classList.add('hidden');
-      // 桌面版顯示所有區塊
+      // 平板版顯示所有區塊
       sections.forEach(section => {
         section.classList.remove('hidden');
       });
+    } else {
+      // 桌面版：隱藏手機導航，區塊顯示由 initDesktopTabs 控制
+      mobileNav.classList.add('hidden');
+      // 不更改 section visibility，讓 desktop tabs 控制
     }
   }
 
