@@ -2959,8 +2959,14 @@ function showPlayerModal(playerIndex) {
     DOM.modalFieldingStats.innerHTML = '<p class="text-text-muted col-span-full text-center py-2">無守備資料</p>';
   }
 
-  // 顯示 Modal
+  // 顯示 Modal 並重置滾動位置
   DOM.playerModal.classList.remove('hidden');
+
+  // 重置 Modal 內容區滾動到頂部
+  const modalContent = DOM.playerModal.querySelector('.overflow-y-auto');
+  if (modalContent) {
+    modalContent.scrollTop = 0;
+  }
 }
 
 /**
