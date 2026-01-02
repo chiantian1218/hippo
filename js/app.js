@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.2.0 - 打擊率vs上壘率改用散布圖
+// 版本: 2.2.1 - 打擊率vs上壘率改用折線圖
 // ============================================================
 
 // API 基礎 URL
@@ -1333,33 +1333,33 @@ function destroyChart(chartName) {
  * 打擊率 vs 上壘率圖表
  */
 function renderBattingOBPChart() {
-  console.log('[OBP] 開始渲染 (scatter 模式)');
+  console.log('[OBP] 開始渲染 (line 模式)');
   const batting = appState.data?.sheets?.batting?.data || [];
   if (batting.length === 0) {
     console.log('[OBP] 無資料');
     return;
   }
 
-  // 取有打擊率的球員
-  const validPlayers = [...batting]
+  // 取前 10 名有打擊率的球員
+  const sorted = [...batting]
     .filter(b => getNumericField(b, '打擊率') > 0)
-    .sort((a, b) => getNumericField(b, '打擊率') - getNumericField(a, '打擊率'));
+    .sort((a, b) => getNumericField(b, '打擊率') - getNumericField(a, '打擊率'))
+    .slice(0, 10);
 
-  if (validPlayers.length === 0) {
+  if (sorted.length === 0) {
     console.log('[OBP] 過濾後無資料');
     return;
   }
 
-  console.log('[OBP] 球員數:', validPlayers.length);
+  console.log('[OBP] 球員數:', sorted.length);
 
-  // 散布圖資料：x=打擊率, y=上壘率
-  const scatterData = validPlayers.map(b => ({
-    x: getNumericField(b, '打擊率'),
-    y: getNumericField(b, '上壘率'),
-    name: getField(b, '姓名') || '未知'
-  }));
+  const labels = sorted.map(b => getField(b, '姓名') || '未知');
+  const avgData = sorted.map(b => getNumericField(b, '打擊率'));
+  const obpData = sorted.map(b => getNumericField(b, '上壘率'));
 
-  console.log('[OBP] scatterData:', scatterData);
+  console.log('[OBP] labels:', labels);
+  console.log('[OBP] avgData:', avgData);
+  console.log('[OBP] obpData:', obpData);
 
   destroyChart('battingOBP');
 
@@ -1371,55 +1371,69 @@ function renderBattingOBPChart() {
 
   try {
     Charts.battingOBP = new Chart(ctx, {
-      type: 'scatter',
+      type: 'line',
       data: {
-        datasets: [{
-          label: '打擊率 vs 上壘率',
-          data: scatterData,
-          backgroundColor: 'rgba(88, 166, 255, 0.8)',
-          borderColor: 'rgba(88, 166, 255, 1)',
-          borderWidth: 2,
-          pointRadius: 8,
-          pointHoverRadius: 10
-        }]
+        labels: labels,
+        datasets: [
+          {
+            label: '打擊率 AVG',
+            data: avgData,
+            borderColor: 'rgba(88, 166, 255, 1)',
+            backgroundColor: 'rgba(88, 166, 255, 0.2)',
+            borderWidth: 3,
+            pointRadius: 6,
+            pointBackgroundColor: 'rgba(88, 166, 255, 1)',
+            tension: 0.1,
+            fill: false
+          },
+          {
+            label: '上壘率 OBP',
+            data: obpData,
+            borderColor: 'rgba(139, 92, 246, 1)',
+            backgroundColor: 'rgba(139, 92, 246, 0.2)',
+            borderWidth: 3,
+            pointRadius: 6,
+            pointBackgroundColor: 'rgba(139, 92, 246, 1)',
+            tension: 0.1,
+            fill: false
+          }
+        ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { display: false },
+          legend: {
+            display: true,
+            position: 'top',
+            labels: { color: '#9ca3af' }
+          },
           tooltip: {
             callbacks: {
               label: function(context) {
-                const point = context.raw;
-                return `${point.name}: AVG ${point.x.toFixed(3)}, OBP ${point.y.toFixed(3)}`;
+                return `${context.dataset.label}: ${context.raw.toFixed(3)}`;
               }
             }
           }
         },
         scales: {
           x: {
-            title: {
-              display: true,
-              text: '打擊率 AVG',
-              color: '#9ca3af'
-            },
             ticks: { color: '#9ca3af' },
             grid: { color: 'rgba(55, 65, 81, 0.5)' }
           },
           y: {
-            title: {
-              display: true,
-              text: '上壘率 OBP',
-              color: '#9ca3af'
+            beginAtZero: true,
+            max: 1,
+            ticks: {
+              color: '#9ca3af',
+              callback: v => v.toFixed(1)
             },
-            ticks: { color: '#9ca3af' },
             grid: { color: 'rgba(55, 65, 81, 0.5)' }
           }
         }
       }
     });
-    console.log('[OBP] 圖表創建成功 (scatter mode)');
+    console.log('[OBP] 圖表創建成功 (line mode)');
   } catch (err) {
     console.error('[OBP] 創建失敗:', err);
   }
