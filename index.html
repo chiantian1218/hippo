@@ -99,9 +99,20 @@
   <div id="login-section" class="min-h-[80vh] flex items-center justify-center">
     <div class="bg-dark-surface rounded-lg shadow-2xl p-8 w-full max-w-md border border-dark-border">
       <div class="text-center mb-6">
-        <span id="login-logo" class="logo-breathing icon-4xl inline-block"></span>
-        <h2 class="text-2xl font-bold text-text-primary mt-4 bg-gradient-to-r from-tech-blue to-tech-purple bg-clip-text text-transparent">泰山河馬</h2>
-        <p class="text-text-secondary mt-2">棒球分析系統</p>
+        <!-- 熱血火球 Logo -->
+        <div class="fireball-container">
+          <div class="fire-ring"></div>
+          <div class="fire-particles">
+            <span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span>
+          </div>
+          <div class="fireball-glow"></div>
+          <span id="login-logo" class="fireball-logo"></span>
+        </div>
+        <h2 class="text-3xl font-black text-text-primary mt-6 fireball-title">
+          <span class="bg-gradient-to-r from-orange-400 via-red-500 to-yellow-500 bg-clip-text text-transparent">泰山河馬</span>
+        </h2>
+        <p class="text-text-secondary mt-2 text-lg tracking-widest">棒球分析系統</p>
       </div>
 
       <div id="login-error" class="bg-danger/20 border border-danger/50 text-danger px-4 py-3 rounded mb-4 hidden">
