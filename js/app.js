@@ -73,6 +73,66 @@ function getIcon(name, extraClass = '') {
 }
 
 // ============================================================
+// 資料存取輔助函數
+// ============================================================
+
+/**
+ * 安全取得物件欄位值（支援模糊匹配）
+ * @param {Object} obj - 資料物件
+ * @param {string} fieldName - 欄位名稱
+ * @returns {string} 欄位值
+ */
+function getField(obj, fieldName) {
+  if (!obj) return '';
+
+  // 直接匹配
+  if (obj[fieldName] !== undefined) return obj[fieldName];
+
+  // 模糊匹配（忽略空格）
+  const normalizedName = fieldName.replace(/\s+/g, '');
+  for (const key of Object.keys(obj)) {
+    if (key.replace(/\s+/g, '') === normalizedName) {
+      return obj[key];
+    }
+  }
+
+  return '';
+}
+
+/**
+ * 安全取得數值型欄位（處理百分比格式）
+ * @param {Object} obj - 資料物件
+ * @param {string} fieldName - 欄位名稱
+ * @returns {number} 數值
+ */
+function getNumericField(obj, fieldName) {
+  const value = getField(obj, fieldName);
+  if (value === '' || value === null || value === undefined) return 0;
+
+  // 處理百分比格式 (如 "58.8%")
+  if (typeof value === 'string' && value.includes('%')) {
+    return parseFloat(value.replace('%', '')) / 100;
+  }
+
+  const num = parseFloat(value);
+  return isNaN(num) ? 0 : num;
+}
+
+/**
+ * 安全取得整數型欄位
+ * @param {Object} obj - 資料物件
+ * @param {string} fieldName - 欄位名稱
+ * @returns {number} 整數
+ */
+function getIntField(obj, fieldName) {
+  const value = getField(obj, fieldName);
+  if (value === '' || value === null || value === undefined) return 0;
+
+  const num = parseInt(value, 10);
+  return isNaN(num) ? 0 : num;
+}
+
+// ============================================================
 // 骨架屏載入系統
 // ============================================================
 const Skeleton = {
@@ -206,6 +266,36 @@ function updateChartsTheme(theme) {
       chart.update();
     }
   });
+}
+
+/**
+ * 取得當前主題的顏色
+ * @param {string} colorType - 顏色類型
+ * @returns {string} 顏色值
+ */
+function getThemeColor(colorType) {
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+
+  const colors = {
+    dark: {
+      'text-primary': '#f3f4f6',
+      'text-secondary': '#9ca3af',
+      'text-muted': '#6b7280',
+      'grid': 'rgba(55, 65, 81, 0.5)',
+      'border': '#374151',
+      'tech-blue': '#00d4ff'
+    },
+    light: {
+      'text-primary': '#1e293b',
+      'text-secondary': '#64748b',
+      'text-muted': '#94a3b8',
+      'grid': 'rgba(226, 232, 240, 0.8)',
+      'border': '#e2e8f0',
+      'tech-blue': '#0891b2'
+    }
+  };
+
+  return isDark ? colors.dark[colorType] : colors.light[colorType];
 }
 
 // 單一對話最大來回次數
@@ -1233,15 +1323,21 @@ function renderBattingOBPChart() {
   const batting = appState.data?.sheets?.batting?.data || [];
   if (batting.length === 0) return;
 
-  // 取前 8 名有打擊率的球員
+  // 取前 8 名有打擊率的球員 (使用安全取值函數)
   const sorted = [...batting]
-    .filter(b => parseFloat(b['打擊率']) > 0)
-    .sort((a, b) => parseFloat(b['打擊率']) - parseFloat(a['打擊率']))
+    .filter(b => getNumericField(b, '打擊率') > 0)
+    .sort((a, b) => getNumericField(b, '打擊率') - getNumericField(a, '打擊率'))
     .slice(0, 8);
 
-  const labels = sorted.map(b => b['姓名'] || '未知');
-  const avgData = sorted.map(b => parseFloat(b['打擊率']) || 0);
-  const obpData = sorted.map(b => parseFloat(b['上壘率']) || 0);
+  // 若沒有資料則不渲染
+  if (sorted.length === 0) {
+    console.warn('renderBattingOBPChart: 無有效打擊率資料');
+    return;
+  }
+
+  const labels = sorted.map(b => getField(b, '姓名') || '未知');
+  const avgData = sorted.map(b => getNumericField(b, '打擊率'));
+  const obpData = sorted.map(b => getNumericField(b, '上壘率'));
 
   destroyChart('battingOBP');
 
@@ -1308,23 +1404,29 @@ function renderExtraBaseChart() {
   const batting = appState.data?.sheets?.batting?.data || [];
   if (batting.length === 0) return;
 
-  // 取有長打的球員（前 8 名依安打數排序）
+  // 取有安打的球員（前 8 名依安打數排序）
   const sorted = [...batting]
-    .filter(b => parseInt(b['安打']) > 0)
-    .sort((a, b) => parseInt(b['安打']) - parseInt(a['安打']))
+    .filter(b => getIntField(b, '安打') > 0)
+    .sort((a, b) => getIntField(b, '安打') - getIntField(a, '安打'))
     .slice(0, 8);
 
-  const labels = sorted.map(b => b['姓名'] || '未知');
+  // 若沒有資料則不渲染
+  if (sorted.length === 0) {
+    console.warn('renderExtraBaseChart: 無有效安打資料');
+    return;
+  }
+
+  const labels = sorted.map(b => getField(b, '姓名') || '未知');
   const singlesData = sorted.map(b => {
-    const hits = parseInt(b['安打']) || 0;
-    const doubles = parseInt(b['二壘打']) || 0;
-    const triples = parseInt(b['三壘打']) || 0;
-    const homers = parseInt(b['全壘打']) || 0;
-    return hits - doubles - triples - homers;  // 一壘打
+    const hits = getIntField(b, '安打');
+    const doubles = getIntField(b, '二壘打');
+    const triples = getIntField(b, '三壘打');
+    const homers = getIntField(b, '全壘打');
+    return Math.max(0, hits - doubles - triples - homers);  // 一壘打
   });
-  const doublesData = sorted.map(b => parseInt(b['二壘打']) || 0);
-  const triplesData = sorted.map(b => parseInt(b['三壘打']) || 0);
-  const homersData = sorted.map(b => parseInt(b['全壘打']) || 0);
+  const doublesData = sorted.map(b => getIntField(b, '二壘打'));
+  const triplesData = sorted.map(b => getIntField(b, '三壘打'));
+  const homersData = sorted.map(b => getIntField(b, '全壘打'));
 
   destroyChart('extraBase');
 
@@ -1405,12 +1507,18 @@ function renderERAChart() {
 
   // 依防禦率排序（取有投球局數的前 8 名，防禦率越低越好）
   const sorted = [...pitching]
-    .filter(p => parseFloat(p['投球局數']) > 0)
-    .sort((a, b) => parseFloat(a['防禦率']) - parseFloat(b['防禦率']))
+    .filter(p => getNumericField(p, '投球局數') > 0)
+    .sort((a, b) => getNumericField(a, '防禦率') - getNumericField(b, '防禦率'))
     .slice(0, 8);
 
-  const labels = sorted.map(p => p['姓名'] || '未知');
-  const eraData = sorted.map(p => parseFloat(p['防禦率']) || 0);
+  // 若沒有資料則不渲染
+  if (sorted.length === 0) {
+    console.warn('renderERAChart: 無有效投手資料');
+    return;
+  }
+
+  const labels = sorted.map(p => getField(p, '姓名') || '未知');
+  const eraData = sorted.map(p => getNumericField(p, '防禦率'));
 
   destroyChart('era');
 
@@ -1471,12 +1579,18 @@ function renderKBBChart() {
   if (pitching.length === 0) return;
 
   // 取有投球紀錄的球員
-  const validPitchers = pitching.filter(p => parseFloat(p['投球局數']) > 0);
+  const validPitchers = pitching.filter(p => getNumericField(p, '投球局數') > 0);
+
+  // 若沒有資料則不渲染
+  if (validPitchers.length === 0) {
+    console.warn('renderKBBChart: 無有效投手資料');
+    return;
+  }
 
   const scatterData = validPitchers.map(p => ({
-    x: parseInt(p['三振']) || 0,
-    y: parseInt(p['四壞球']) || 0,
-    label: p['姓名'] || '未知'
+    x: getIntField(p, '三振'),
+    y: getIntField(p, '四壞球'),
+    label: getField(p, '姓名') || '未知'
   }));
 
   destroyChart('kbb');
@@ -1549,12 +1663,18 @@ function renderFieldingPctChart() {
 
   // 依守備率排序（取前 8 名）
   const sorted = [...fielding]
-    .filter(f => parseFloat(f['守備率']) > 0)
-    .sort((a, b) => parseFloat(b['守備率']) - parseFloat(a['守備率']))
+    .filter(f => getNumericField(f, '守備率') > 0)
+    .sort((a, b) => getNumericField(b, '守備率') - getNumericField(a, '守備率'))
     .slice(0, 8);
 
-  const labels = sorted.map(f => `${f['姓名'] || '未知'} (${f['守位'] || '-'})`);
-  const pctData = sorted.map(f => parseFloat(f['守備率']) || 0);
+  // 若沒有資料則不渲染
+  if (sorted.length === 0) {
+    console.warn('renderFieldingPctChart: 無有效守備資料');
+    return;
+  }
+
+  const labels = sorted.map(f => `${getField(f, '姓名') || '未知'} (${getField(f, '守位') || '-'})`);
+  const pctData = sorted.map(f => getNumericField(f, '守備率'));
 
   destroyChart('fieldingPct');
 
@@ -1620,10 +1740,10 @@ function renderErrorsChart() {
 
   // 統計各球員失誤
   const playersWithErrors = fielding
-    .filter(f => parseInt(f['失誤']) > 0)
+    .filter(f => getIntField(f, '失誤') > 0)
     .map(f => ({
-      name: f['姓名'] || '未知',
-      errors: parseInt(f['失誤']) || 0
+      name: getField(f, '姓名') || '未知',
+      errors: getIntField(f, '失誤')
     }))
     .sort((a, b) => b.errors - a.errors)
     .slice(0, 6);
@@ -1691,21 +1811,21 @@ function renderRadarChart(playerIndex = 0) {
   const player = players[playerIndex];
   if (!player) return;
 
-  const name = player['姓名'] || '未知';
-  const number = player['背號'] || '--';
+  const name = getField(player, '姓名') || '未知';
+  const number = getField(player, '背號') || '--';
 
   // 找到該球員的各項數據
-  const playerBatting = batting.find(b => b['背號'] === number || b['姓名'] === name);
-  const playerPitching = pitching.find(p => p['背號'] === number || p['姓名'] === name);
-  const playerFielding = fielding.find(f => f['背號'] === number || f['姓名'] === name);
+  const playerBatting = batting.find(b => getField(b, '背號') === number || getField(b, '姓名') === name);
+  const playerPitching = pitching.find(p => getField(p, '背號') === number || getField(p, '姓名') === name);
+  const playerFielding = fielding.find(f => getField(f, '背號') === number || getField(f, '姓名') === name);
 
   // 計算標準化分數 (0-100)
-  const battingScore = playerBatting ? Math.min(100, (parseFloat(playerBatting['打擊率']) || 0) * 200) : 0;
-  const powerScore = playerBatting ? Math.min(100, ((parseInt(playerBatting['二壘打']) || 0) + (parseInt(playerBatting['三壘打']) || 0) * 2 + (parseInt(playerBatting['全壘打']) || 0) * 3) * 10) : 0;
-  const speedScore = playerBatting ? Math.min(100, (parseInt(playerBatting['盜壘']) || 0) * 15) : 0;
-  const pitchingScore = playerPitching ? Math.min(100, Math.max(0, 100 - (parseFloat(playerPitching['防禦率']) || 10) * 10)) : 0;
-  const fieldingScore = playerFielding ? Math.min(100, (parseFloat(playerFielding['守備率']) || 0) * 100) : 0;
-  const disciplineScore = playerBatting ? Math.min(100, (parseInt(playerBatting['四壞球']) || 0) * 8 - (parseInt(playerBatting['三振']) || 0) * 3 + 50) : 0;
+  const battingScore = playerBatting ? Math.min(100, getNumericField(playerBatting, '打擊率') * 200) : 0;
+  const powerScore = playerBatting ? Math.min(100, (getIntField(playerBatting, '二壘打') + getIntField(playerBatting, '三壘打') * 2 + getIntField(playerBatting, '全壘打') * 3) * 10) : 0;
+  const speedScore = playerBatting ? Math.min(100, getIntField(playerBatting, '盜壘') * 15) : 0;
+  const pitchingScore = playerPitching ? Math.min(100, Math.max(0, 100 - getNumericField(playerPitching, '防禦率') * 10)) : 0;
+  const fieldingScore = playerFielding ? Math.min(100, getNumericField(playerFielding, '守備率') * 100) : 0;
+  const disciplineScore = playerBatting ? Math.min(100, getIntField(playerBatting, '四壞球') * 8 - getIntField(playerBatting, '三振') * 3 + 50) : 0;
 
   destroyChart('radar');
 
@@ -1738,14 +1858,14 @@ function renderRadarChart(playerIndex = 0) {
           max: 100,
           ticks: {
             stepSize: 20,
-            color: '#9ca3af',
+            color: getThemeColor('text-secondary'),
             backdropColor: 'transparent'
           },
-          grid: { color: 'rgba(55, 65, 81, 0.5)' },
-          angleLines: { color: 'rgba(55, 65, 81, 0.5)' },
+          grid: { color: getThemeColor('grid') },
+          angleLines: { color: getThemeColor('grid') },
           pointLabels: {
-            color: '#f3f4f6',
-            font: { size: 12 }
+            color: getThemeColor('text-primary'),
+            font: { size: 12, weight: 'bold' }
           }
         }
       }
@@ -1761,20 +1881,20 @@ function renderWinLossChart() {
 
   // 過濾有效比賽並按日期排序
   const games = rawGames
-    .filter(g => g['對手'] && g['對手'].trim() !== '' && g['結果'])
+    .filter(g => getField(g, '對手') && getField(g, '對手').trim() !== '' && getField(g, '結果'))
     .slice(0, 15);  // 取最近 15 場
 
   if (games.length === 0) return;
 
-  const labels = games.map((g, i) => `第${i + 1}場`);
-  const runsFor = games.map(g => parseInt(g['我方得分']) || 0);
-  const runsAgainst = games.map(g => parseInt(g['對方得分']) || 0);
-  const results = games.map(g => g['結果']);
+  const labels = games.map((g, i) => `第${i + 1}場 vs ${getField(g, '對手')}`);
+  const runsFor = games.map(g => getIntField(g, '我方得分'));
+  const runsAgainst = games.map(g => getIntField(g, '對方得分'));
+  const results = games.map(g => getField(g, '結果'));
 
   // 計算累計勝場
   let cumulativeWins = 0;
   const winTrend = games.map(g => {
-    if (g['結果'] === '勝') cumulativeWins++;
+    if (getField(g, '結果') === '勝') cumulativeWins++;
     return cumulativeWins;
   });
 
@@ -1818,18 +1938,40 @@ function renderWinLossChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
       plugins: {
         legend: {
           position: 'top',
-          labels: { color: '#9ca3af' }
+          labels: { color: getThemeColor('text-secondary') }
         },
         tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(17, 24, 39, 0.95)',
+          titleColor: '#f3f4f6',
+          bodyColor: '#9ca3af',
+          borderColor: '#374151',
+          borderWidth: 1,
+          padding: 12,
+          displayColors: true,
           callbacks: {
-            afterLabel: (context) => {
-              if (context.datasetIndex === 0) {
-                return `結果: ${results[context.dataIndex]}`;
+            title: (contexts) => {
+              if (contexts.length > 0) {
+                const idx = contexts[0].dataIndex;
+                return `${labels[idx]} (${results[idx]})`;
               }
               return '';
+            },
+            label: (context) => {
+              const label = context.dataset.label || '';
+              const value = context.parsed.y;
+              if (label === '累計勝場') {
+                return ` ${label}: ${value} 勝`;
+              }
+              return ` ${label}: ${value} 分`;
             }
           }
         },
@@ -1837,18 +1979,28 @@ function renderWinLossChart() {
       },
       scales: {
         x: {
-          ticks: { color: '#9ca3af' },
-          grid: { color: 'rgba(55, 65, 81, 0.5)' }
+          ticks: { color: getThemeColor('text-secondary') },
+          grid: { color: getThemeColor('grid') }
         },
         y: {
           beginAtZero: true,
           position: 'left',
-          ticks: { color: '#9ca3af' },
-          grid: { color: 'rgba(55, 65, 81, 0.5)' }
+          title: {
+            display: true,
+            text: '得分',
+            color: getThemeColor('text-secondary')
+          },
+          ticks: { color: getThemeColor('text-secondary') },
+          grid: { color: getThemeColor('grid') }
         },
         y1: {
           beginAtZero: true,
           position: 'right',
+          title: {
+            display: true,
+            text: '勝場數',
+            color: '#10b981'
+          },
           ticks: { color: '#10b981' },
           grid: { display: false }
         }
