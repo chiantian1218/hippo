@@ -1453,16 +1453,18 @@ function renderBattingOBPChart() {
         {
           label: '打擊率 AVG',
           data: avgData,
-          backgroundColor: 'rgba(0, 212, 255, 0.7)',
-          borderColor: '#00d4ff',
-          borderWidth: 1
+          backgroundColor: '#ef4444',  // 鮮紅色測試
+          borderColor: '#dc2626',
+          borderWidth: 2,
+          barThickness: 20
         },
         {
           label: '上壘率 OBP',
           data: obpData,
-          backgroundColor: 'rgba(139, 92, 246, 0.7)',
-          borderColor: '#8b5cf6',
-          borderWidth: 1
+          backgroundColor: '#22c55e',  // 鮮綠色測試
+          borderColor: '#16a34a',
+          borderWidth: 2,
+          barThickness: 20
         }
       ]
     },
@@ -1472,9 +1474,10 @@ function renderBattingOBPChart() {
       plugins: {
         legend: {
           position: 'top',
-          labels: { color: '#9ca3af' }
-        },
-        ...getChartZoomConfig()
+          labels: { color: '#f3f4f6' }
+        }
+        // 暫時移除 zoom 插件測試
+        // ...getChartZoomConfig()
       },
       scales: {
         x: {
@@ -1495,6 +1498,11 @@ function renderBattingOBPChart() {
   });
 
   console.log('打擊率圖表 - Chart 創建成功:', Charts.battingOBP ? '是' : '否');
+  console.log('打擊率圖表 - Canvas 尺寸:', ctx.width, 'x', ctx.height);
+  console.log('打擊率圖表 - Chart data:', Charts.battingOBP.data);
+
+  // 強制重繪
+  Charts.battingOBP.update();
 
   // 雙擊重置縮放
   ctx.ondblclick = () => resetChartZoom(Charts.battingOBP);
