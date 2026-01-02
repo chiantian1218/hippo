@@ -1,10 +1,261 @@
 /* ============================================================
    泰山河馬棒球分析系統 - 自訂樣式
-   版本: 1.7
-   說明: 補充 Tailwind CSS 無法涵蓋的自訂樣式
+   版本: 2.0.0
+   更新: 專業深色科技風格 + 多圖表 + Mobile-first RWD
    ============================================================ */
 
-/* ===== Markdown 內容樣式 ===== */
+/* ===== CSS 變數定義 ===== */
+:root {
+  /* 深色主題背景 (預設) */
+  --bg-primary: #0a0f1a;
+  --bg-secondary: #111827;
+  --bg-tertiary: #1f2937;
+  --border-color: #374151;
+
+  /* 科技藍漸層 */
+  --gradient-tech: linear-gradient(135deg, #00d4ff 0%, #8b5cf6 100%);
+  --gradient-card: linear-gradient(180deg, rgba(17,24,39,1) 0%, rgba(31,41,55,1) 100%);
+
+  /* 呼吸燈效果 */
+  --glow-blue: 0 0 20px rgba(0, 212, 255, 0.5);
+  --glow-purple: 0 0 20px rgba(139, 92, 246, 0.5);
+
+  /* 顏色變數 */
+  --tech-blue: #00d4ff;
+  --tech-blue-dim: #0891b2;
+  --tech-purple: #8b5cf6;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --text-primary: #f3f4f6;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+
+  /* 排版變數 */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans TC', sans-serif;
+  --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Noto Sans Mono', monospace;
+}
+
+/* ===== 淺色主題 ===== */
+[data-theme="light"] {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f5f9;
+  --border-color: #e2e8f0;
+
+  --gradient-card: linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(241,245,249,1) 100%);
+
+  --glow-blue: 0 0 20px rgba(0, 180, 216, 0.3);
+  --glow-purple: 0 0 20px rgba(139, 92, 246, 0.3);
+
+  --tech-blue: #0891b2;
+  --tech-blue-dim: #06b6d4;
+  --tech-purple: #7c3aed;
+  --success: #059669;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+}
+
+/* ===== 全域排版 ===== */
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ===== 無障礙：焦點可見性 ===== */
+:focus-visible {
+  outline: 2px solid var(--tech-blue);
+  outline-offset: 2px;
+}
+
+/* ===== 減少動畫偏好支援 ===== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ===== 選取文字樣式 ===== */
+::selection {
+  background: var(--tech-blue);
+  color: var(--bg-primary);
+}
+
+/* ===== SVG Icon 基本樣式 ===== */
+.icon {
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  vertical-align: -0.125em;
+  flex-shrink: 0;
+}
+
+.icon-sm { width: 0.875rem; height: 0.875rem; }
+.icon-md { width: 1.25rem; height: 1.25rem; }
+.icon-lg { width: 1.5rem; height: 1.5rem; }
+.icon-xl { width: 2rem; height: 2rem; }
+.icon-2xl { width: 3rem; height: 3rem; }
+.icon-4xl { width: 4rem; height: 4rem; }
+
+.icon-primary { stroke: var(--tech-blue); }
+.icon-secondary { stroke: var(--text-secondary); }
+.icon-success { stroke: var(--success); }
+.icon-warning { stroke: var(--warning); }
+.icon-danger { stroke: var(--danger); }
+
+/* ===== 呼吸燈動畫 ===== */
+@keyframes pulse-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.4));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(0, 212, 255, 0.8));
+    transform: scale(1.05);
+  }
+}
+
+.logo-breathing {
+  animation: pulse-glow 2.5s ease-in-out infinite;
+  color: var(--tech-blue);
+}
+
+/* ===== Skeleton Loading ===== */
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 25%,
+    var(--bg-secondary) 50%,
+    var(--bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+.skeleton-text { height: 1em; margin-bottom: 0.5em; }
+.skeleton-text:last-child { width: 80%; }
+.skeleton-circle { border-radius: 50%; }
+.skeleton-card { height: 100px; border-radius: 8px; }
+
+/* ===== 卡片 Hover 效果 ===== */
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  border-color: var(--tech-blue);
+  box-shadow:
+    0 10px 40px rgba(0, 0, 0, 0.3),
+    0 0 20px rgba(0, 212, 255, 0.1);
+}
+
+/* ===== 按鈕光暈效果 ===== */
+.btn-glow {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.btn-glow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.btn-glow:hover::before {
+  left: 100%;
+}
+
+.btn-glow:hover {
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+}
+
+/* ===== 區塊淡入動畫 ===== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+.animate-delay-100 { animation-delay: 0.1s; }
+.animate-delay-200 { animation-delay: 0.2s; }
+.animate-delay-300 { animation-delay: 0.3s; }
+
+/* ===== 球員列表項 Hover ===== */
+.player-item-hover {
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.player-item-hover:hover {
+  background: var(--bg-tertiary);
+  border-left-color: var(--tech-blue);
+}
+
+/* ===== Spinner 旋轉 ===== */
+.icon-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* ===== Chart Tab 樣式 ===== */
+.chart-tab {
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.2s ease;
+}
+
+.chart-tab:hover {
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+}
+
+.chart-tab.active {
+  color: var(--tech-blue);
+  border-bottom-color: var(--tech-blue);
+}
+
+.chart-panel {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* ===== Markdown 內容樣式 (深色主題優化) ===== */
 .markdown-content h1,
 .markdown-content h2,
 .markdown-content h3,
@@ -12,7 +263,7 @@
   font-weight: 700;
   margin-top: 1em;
   margin-bottom: 0.5em;
-  color: #1e40af;
+  color: var(--tech-blue);
 }
 
 .markdown-content h1 { font-size: 1.5em; }
@@ -22,13 +273,15 @@
 
 .markdown-content p {
   margin-bottom: 0.75em;
-  line-height: 1.6;
+  line-height: 1.7;
+  color: var(--text-primary);
 }
 
 .markdown-content ul,
 .markdown-content ol {
   margin-left: 1.5em;
   margin-bottom: 0.75em;
+  color: var(--text-primary);
 }
 
 .markdown-content ul {
@@ -40,67 +293,112 @@
 }
 
 .markdown-content li {
-  margin-bottom: 0.25em;
-  line-height: 1.5;
+  margin-bottom: 0.35em;
+  line-height: 1.6;
 }
 
 .markdown-content strong {
   font-weight: 700;
-  color: #1e3a5f;
+  color: var(--tech-purple);
 }
 
 .markdown-content em {
   font-style: italic;
+  color: var(--text-secondary);
 }
 
 .markdown-content hr {
   border: none;
-  border-top: 1px solid #d1d5db;
+  border-top: 1px solid var(--border-color);
   margin: 1em 0;
 }
 
 .markdown-content code {
-  background-color: #f3f4f6;
-  padding: 0.1em 0.3em;
-  border-radius: 3px;
+  background-color: var(--bg-tertiary);
+  color: var(--tech-blue);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
   font-size: 0.9em;
-  font-family: monospace;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
 }
 
 .markdown-content pre {
-  background-color: #f3f4f6;
-  padding: 0.75em;
-  border-radius: 6px;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  padding: 1em;
+  border-radius: 8px;
   overflow-x: auto;
   margin-bottom: 0.75em;
 }
 
-.markdown-content blockquote {
-  border-left: 3px solid #3b82f6;
-  padding-left: 1em;
-  margin-left: 0;
-  color: #4b5563;
-  font-style: italic;
+.markdown-content pre code {
+  background: transparent;
+  padding: 0;
+  color: var(--text-primary);
 }
 
-/* ===== 捲動條樣式 ===== */
+.markdown-content blockquote {
+  border-left: 3px solid var(--tech-purple);
+  padding-left: 1em;
+  margin-left: 0;
+  color: var(--text-secondary);
+  font-style: italic;
+  background: var(--bg-tertiary);
+  padding: 0.75em 1em;
+  border-radius: 0 8px 8px 0;
+}
+
+.markdown-content a {
+  color: var(--tech-blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.markdown-content a:hover {
+  color: var(--tech-purple);
+}
+
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid var(--border-color);
+  padding: 0.5em 0.75em;
+  text-align: left;
+}
+
+.markdown-content th {
+  background: var(--bg-tertiary);
+  color: var(--tech-blue);
+  font-weight: 600;
+}
+
+.markdown-content tr:hover {
+  background: var(--bg-tertiary);
+}
+
+/* ===== 捲動條樣式 (深色主題) ===== */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--bg-primary);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: var(--border-color);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a1a1a1;
+  background: var(--text-muted);
 }
 
 /* ===== 對話區塊捲動條 ===== */
@@ -109,7 +407,7 @@
 }
 
 #conversation-area::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: var(--border-color);
 }
 
 #player-list::-webkit-scrollbar {
@@ -117,7 +415,7 @@
 }
 
 #player-list::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: var(--border-color);
 }
 
 /* ===== 載入動畫 ===== */
@@ -184,7 +482,16 @@
 
 /* ===== 輸入框 focus 效果 ===== */
 #question-input:focus {
-  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.2);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.2);
+}
+
+/* 所有輸入框統一 focus 樣式 */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--tech-blue) !important;
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.15);
 }
 
 /* ===== 對話訊息動畫 ===== */
@@ -217,6 +524,30 @@
   animation: spin 1s linear infinite;
 }
 
+/* ===== 手機版底部 Tab 導航 ===== */
+.mobile-tab {
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+}
+
+.mobile-tab:hover {
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+}
+
+.mobile-tab.active {
+  color: var(--tech-blue);
+}
+
+.mobile-tab.active .icon {
+  filter: drop-shadow(0 0 4px rgba(0, 212, 255, 0.5));
+}
+
+/* iOS Safe Area 支援 */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
 /* ===== 響應式調整 ===== */
 @media (max-width: 640px) {
   /* 手機版快速分析按鈕 */
@@ -224,6 +555,141 @@
     width: 100%;
     justify-content: center;
   }
+
+  /* 手機版增加底部 padding，避免被導航遮擋 */
+  #main-content {
+    padding-bottom: 80px;
+  }
+
+  /* 手機版觸控優化：增大按鈕尺寸 */
+  button,
+  .btn-glow {
+    min-height: 44px;
+  }
+
+  /* 防止 iOS 縮放輸入框 */
+  input,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* 手機版球員列表項增大 */
+  .player-item {
+    padding: 12px;
+    min-height: 56px;
+  }
+
+  /* 手機版圖表 Tab 捲動 */
+  .chart-tab {
+    white-space: nowrap;
+  }
+}
+
+/* ===== 主題切換按鈕 ===== */
+.theme-toggle {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.theme-toggle:hover {
+  background: var(--bg-tertiary);
+}
+
+.theme-toggle .icon-sun,
+.theme-toggle .icon-moon {
+  position: absolute;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* 深色主題：顯示太陽圖示 */
+.theme-toggle .icon-sun {
+  opacity: 1;
+  transform: rotate(0deg);
+}
+
+.theme-toggle .icon-moon {
+  opacity: 0;
+  transform: rotate(-90deg);
+}
+
+/* 淺色主題：顯示月亮圖示 */
+[data-theme="light"] .theme-toggle .icon-sun {
+  opacity: 0;
+  transform: rotate(90deg);
+}
+
+[data-theme="light"] .theme-toggle .icon-moon {
+  opacity: 1;
+  transform: rotate(0deg);
+}
+
+/* ===== 淺色主題 Tailwind 覆蓋 ===== */
+[data-theme="light"] body,
+[data-theme="light"].bg-dark-bg {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .bg-dark-surface {
+  background-color: var(--bg-secondary) !important;
+}
+
+[data-theme="light"] .bg-dark-surface-hover {
+  background-color: var(--bg-tertiary) !important;
+}
+
+[data-theme="light"] .border-dark-border {
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="light"] .text-text-primary {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .text-text-secondary {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="light"] .text-text-muted {
+  color: var(--text-muted) !important;
+}
+
+[data-theme="light"] .text-tech-blue {
+  color: var(--tech-blue) !important;
+}
+
+[data-theme="light"] .text-tech-purple {
+  color: var(--tech-purple) !important;
+}
+
+[data-theme="light"] .from-tech-blue {
+  --tw-gradient-from: var(--tech-blue) !important;
+}
+
+[data-theme="light"] .to-tech-purple {
+  --tw-gradient-to: var(--tech-purple) !important;
+}
+
+/* 淺色主題下的漸層文字 */
+[data-theme="light"] .bg-gradient-to-r.from-tech-blue.to-tech-purple {
+  background: linear-gradient(to right, var(--tech-blue), var(--tech-purple)) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+}
+
+/* 主題切換過渡動畫 */
+body,
+.bg-dark-bg,
+.bg-dark-surface,
+.bg-dark-surface-hover,
+.border-dark-border {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
 /* ===== 列印樣式 ===== */
