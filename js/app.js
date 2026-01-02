@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.2.3 - crosshair 垂直線 + 移除 U12/更新時間/Gemini
+// 版本: 2.2.4 - 一壘打改用黃色 (原灰色太暗)
 // ============================================================
 
 // API 基礎 URL
@@ -1511,8 +1511,8 @@ function renderExtraBaseChart() {
         {
           label: '一壘打',
           data: singlesData,
-          backgroundColor: 'rgba(156, 163, 175, 0.7)',
-          borderColor: '#9ca3af',
+          backgroundColor: 'rgba(251, 191, 36, 0.8)',
+          borderColor: '#fbbf24',
           borderWidth: 1
         },
         {
