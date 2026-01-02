@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.6.2 - 對手戰績圖表除錯版本
+// 版本: 2.6.3 - 對手戰績圖表完整除錯
 // ============================================================
 
 // API 基礎 URL
@@ -3790,6 +3790,8 @@ function renderOpponentChart() {
     }
   });
 
+  console.log('[DEBUG] renderOpponentChart - opponentStats:', opponentStats);
+
   const opponents = Object.keys(opponentStats)
     .map(opp => ({
       name: opp,
@@ -3799,12 +3801,18 @@ function renderOpponentChart() {
     .sort((a, b) => b.games - a.games)
     .slice(0, 8);
 
+  console.log('[DEBUG] renderOpponentChart - opponents:', opponents);
+  console.log('[DEBUG] renderOpponentChart - opponents.length:', opponents.length);
+
   destroyChart('opponent');
 
   if (opponents.length === 0) {
+    console.log('[DEBUG] renderOpponentChart - 無資料，顯示提示訊息');
     ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無對手戰績資料</div>';
     return;
   }
+
+  console.log('[DEBUG] renderOpponentChart - 開始建立圖表');
 
   Charts.opponent = new Chart(ctx, {
     type: 'bar',
