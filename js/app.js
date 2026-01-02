@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.4.0 - 桌面版左側 Tab 導航
+// 版本: 2.5.0 - 豐富統計與圖表內容、多項 UI/UX 改善
 // ============================================================
 
 // API 基礎 URL
@@ -833,6 +833,36 @@ function initMobileNav() {
 }
 
 /**
+ * 公開的 section 切換函數
+ * 模擬點擊對應的 tab 來切換主內容區塊
+ * @param {string} sectionName - 區塊名稱 ('players', 'stats', 'charts', 'ai')
+ */
+function navigateToSection(sectionName) {
+  const isMobile = window.innerWidth < 640;
+  const isDesktop = window.innerWidth >= 1024;
+
+  if (isMobile) {
+    // 手機版：點擊底部 tab
+    const mobileTab = document.querySelector(`.mobile-tab[data-section="${sectionName}"]`);
+    if (mobileTab) {
+      mobileTab.click();
+    }
+  } else if (isDesktop) {
+    // 桌面版：點擊左側 tab
+    const desktopTab = document.querySelector(`.desktop-tab[data-section="${sectionName}"]`);
+    if (desktopTab) {
+      desktopTab.click();
+    }
+  } else {
+    // 平板版：直接滾動到該區塊
+    const section = document.getElementById(`section-${sectionName}`);
+    if (section) {
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+}
+
+/**
  * 快取 DOM 元素
  */
 function cacheDOMElements() {
@@ -1016,6 +1046,9 @@ async function login(username, password) {
 
     // 隱藏登入錯誤
     hideLoginError();
+
+    // 清除 AI 對話紀錄（避免不同使用者看到彼此的對話）
+    startNewConversation();
 
     // 顯示主畫面並載入數據
     showMainContent();
@@ -1353,19 +1386,31 @@ function populateRadarPlayerSelect() {
 function renderTeamStats() {
   const rawGames = appState.data?.sheets?.games?.data || [];
   const batting = appState.data?.sheets?.batting?.data || [];
+  const pitching = appState.data?.sheets?.pitching?.data || [];
 
   // 過濾空白比賽紀錄（只保留有對手資料的紀錄）
   const games = rawGames.filter(g => g['對手'] && g['對手'].trim() !== '');
 
-  // 計算統計
+  // 計算比賽統計
   const totalGames = games.length;
   const wins = games.filter(g => g['結果'] === '勝').length;
   const losses = games.filter(g => g['結果'] === '敗').length;
   const ties = games.filter(g => g['結果'] === '和').length;
 
+  // 勝率
+  const winRate = totalGames > 0 ? ((wins / totalGames) * 100).toFixed(1) + '%' : '---';
+
   // 總得分/失分
   const totalRuns = games.reduce((sum, g) => sum + (parseInt(g['我方得分']) || 0), 0);
   const totalRunsAgainst = games.reduce((sum, g) => sum + (parseInt(g['對方得分']) || 0), 0);
+
+  // 得失分差
+  const runDiff = totalRuns - totalRunsAgainst;
+  const runDiffStr = runDiff >= 0 ? `+${runDiff}` : `${runDiff}`;
+
+  // 場均得分/失分
+  const avgRuns = totalGames > 0 ? (totalRuns / totalGames).toFixed(1) : '---';
+  const avgRunsAgainst = totalGames > 0 ? (totalRunsAgainst / totalGames).toFixed(1) : '---';
 
   // 團隊打擊率（所有球員平均）
   const avgList = batting.map(b => parseFloat(b['打擊率']) || 0).filter(v => v > 0);
@@ -1373,19 +1418,61 @@ function renderTeamStats() {
     ? (avgList.reduce((a, b) => a + b, 0) / avgList.length).toFixed(3)
     : '---';
 
+  // 團隊上壘率
+  const obpList = batting.map(b => parseFloat(b['上壘率']) || 0).filter(v => v > 0);
+  const teamOBP = obpList.length > 0
+    ? (obpList.reduce((a, b) => a + b, 0) / obpList.length).toFixed(3)
+    : '---';
+
+  // 全壘打總數
+  const totalHR = batting.reduce((sum, b) => sum + (parseInt(b['全壘打']) || 0), 0);
+
+  // 盜壘總數
+  const totalSB = batting.reduce((sum, b) => sum + (parseInt(b['盜壘']) || 0), 0);
+
+  // 團隊三振總數 (被三振)
+  const totalK = batting.reduce((sum, b) => sum + (parseInt(b['三振']) || 0), 0);
+
+  // 團隊四壞球總數
+  const totalBB = batting.reduce((sum, b) => sum + (parseInt(b['四壞球']) || 0), 0);
+
+  // 投手統計 - 團隊投手三振數
+  const pitcherK = pitching.reduce((sum, p) => sum + (parseInt(p['三振']) || 0), 0);
+
+  // 最高打擊率球員
+  const topHitter = batting.reduce((best, b) => {
+    const avg = parseFloat(b['打擊率']) || 0;
+    return avg > (best.avg || 0) ? { name: b['姓名'], avg } : best;
+  }, {});
+  const topHitterStr = topHitter.name ? `${topHitter.name} (${topHitter.avg.toFixed(3)})` : '---';
+
   const stats = [
+    // 第一行：比賽概況
     { label: '比賽場數', value: totalGames, icon: 'stadium', color: 'text-tech-blue' },
     { label: '勝-敗-和', value: `${wins}-${losses}-${ties}`, icon: 'trophy', color: 'text-warning' },
+    { label: '勝率', value: winRate, icon: 'trendingUp', color: 'text-success' },
+    { label: '球員人數', value: batting.length, icon: 'users', color: 'text-tech-blue' },
+    // 第二行：得失分
     { label: '總得分', value: totalRuns, icon: 'baseball', color: 'text-success' },
     { label: '總失分', value: totalRunsAgainst, icon: 'shield', color: 'text-danger' },
+    { label: '得失分差', value: runDiffStr, icon: 'chartBar', color: runDiff >= 0 ? 'text-success' : 'text-danger' },
+    { label: '場均得分', value: avgRuns, icon: 'target', color: 'text-tech-purple' },
+    // 第三行：打擊數據
     { label: '團隊打擊率', value: teamAvg, icon: 'chartBar', color: 'text-tech-purple' },
-    { label: '球員人數', value: batting.length, icon: 'users', color: 'text-tech-blue' }
+    { label: '團隊上壘率', value: teamOBP, icon: 'trendingUp', color: 'text-tech-blue' },
+    { label: '全壘打', value: totalHR, icon: 'baseball', color: 'text-warning' },
+    { label: '盜壘', value: totalSB, icon: 'refresh', color: 'text-success' },
+    // 第四行：其他數據
+    { label: '四壞球', value: totalBB, icon: 'target', color: 'text-tech-blue' },
+    { label: '被三振', value: totalK, icon: 'xCircle', color: 'text-danger' },
+    { label: '投手三振', value: pitcherK, icon: 'target', color: 'text-success' },
+    { label: '打擊王', value: topHitterStr, icon: 'trophy', color: 'text-warning', isSmall: true }
   ];
 
   const html = stats.map(stat => `
     <div class="text-center p-3 bg-dark-surface-hover rounded-lg border border-dark-border hover:border-tech-blue/50 transition">
       <div class="icon-xl ${stat.color} mx-auto mb-2">${Icons[stat.icon]}</div>
-      <p class="text-xl font-bold text-text-primary">${stat.value}</p>
+      <p class="${stat.isSmall ? 'text-sm' : 'text-xl'} font-bold text-text-primary">${stat.value}</p>
       <p class="text-xs text-text-muted">${stat.label}</p>
     </div>
   `).join('');
@@ -1400,18 +1487,26 @@ function renderAllCharts() {
   // 打擊分析圖表
   renderBattingOBPChart();
   renderExtraBaseChart();
+  renderRunsRbiChart();
+  renderBbKChart();
 
   // 投手分析圖表
   renderERAChart();
   renderKBBChart();
+  renderInningsChart();
+  renderPitcherRecordChart();
 
   // 守備分析圖表
   renderFieldingPctChart();
   renderErrorsChart();
+  renderPutoutsAssistsChart();
+  renderDefenseValueChart();
 
   // 綜合分析圖表
   renderRadarChart(0);  // 預設第一位球員
   renderWinLossChart();
+  renderGameScoresChart();
+  renderTeamOffenseChart();
 }
 
 /**
@@ -2090,6 +2185,7 @@ function renderWinLossChart() {
 
   Charts.winLoss = new Chart(ctx, {
     type: 'line',
+    plugins: [crosshairPlugin],
     data: {
       labels: labels,
       datasets: [
@@ -2195,6 +2291,439 @@ function renderWinLossChart() {
 
   // 雙擊重置縮放
   ctx.ondblclick = () => resetChartZoom(Charts.winLoss);
+}
+
+/**
+ * 得分/打點排行圖表
+ */
+function renderRunsRbiChart() {
+  const batting = appState.data?.sheets?.batting?.data || [];
+  if (batting.length === 0) return;
+
+  // 過濾有效數據並排序
+  const players = batting
+    .filter(b => b['姓名'])
+    .map(b => ({
+      name: b['姓名'],
+      runs: parseInt(b['得分']) || 0,
+      rbi: parseInt(b['打點']) || 0
+    }))
+    .filter(p => p.runs > 0 || p.rbi > 0)
+    .sort((a, b) => (b.runs + b.rbi) - (a.runs + a.rbi))
+    .slice(0, 10);
+
+  if (players.length === 0) return;
+
+  destroyChart('runsRbi');
+  const ctx = document.getElementById('chart-runs-rbi');
+  if (!ctx) return;
+
+  Charts.runsRbi = new Chart(ctx, {
+    type: 'bar',
+    plugins: [crosshairPlugin],
+    data: {
+      labels: players.map(p => p.name),
+      datasets: [
+        {
+          label: '得分',
+          data: players.map(p => p.runs),
+          backgroundColor: 'rgba(0, 212, 255, 0.8)',
+          borderColor: '#00d4ff',
+          borderWidth: 1
+        },
+        {
+          label: '打點',
+          data: players.map(p => p.rbi),
+          backgroundColor: 'rgba(139, 92, 246, 0.8)',
+          borderColor: '#8b5cf6',
+          borderWidth: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { color: getThemeColor('text-secondary') } }
+      },
+      scales: {
+        x: { ticks: { color: getThemeColor('text-secondary') } },
+        y: { beginAtZero: true, ticks: { color: getThemeColor('text-secondary') } }
+      }
+    }
+  });
+}
+
+/**
+ * 選球能力 (四壞 vs 三振) 圖表
+ */
+function renderBbKChart() {
+  const batting = appState.data?.sheets?.batting?.data || [];
+  if (batting.length === 0) return;
+
+  const players = batting
+    .filter(b => b['姓名'])
+    .map(b => ({
+      name: b['姓名'],
+      bb: parseInt(b['四壞球']) || 0,
+      k: parseInt(b['三振']) || 0
+    }))
+    .filter(p => p.bb > 0 || p.k > 0)
+    .sort((a, b) => b.bb - a.bb)
+    .slice(0, 10);
+
+  if (players.length === 0) return;
+
+  destroyChart('bbK');
+  const ctx = document.getElementById('chart-bb-k');
+  if (!ctx) return;
+
+  Charts.bbK = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: players.map(p => p.name),
+      datasets: [
+        {
+          label: '四壞球',
+          data: players.map(p => p.bb),
+          backgroundColor: 'rgba(16, 185, 129, 0.8)',
+          borderColor: '#10b981',
+          borderWidth: 1
+        },
+        {
+          label: '三振',
+          data: players.map(p => p.k),
+          backgroundColor: 'rgba(239, 68, 68, 0.8)',
+          borderColor: '#ef4444',
+          borderWidth: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { color: getThemeColor('text-secondary') } }
+      },
+      scales: {
+        x: { ticks: { color: getThemeColor('text-secondary') } },
+        y: { beginAtZero: true, ticks: { color: getThemeColor('text-secondary') } }
+      }
+    }
+  });
+}
+
+/**
+ * 投球局數排行圖表
+ */
+function renderInningsChart() {
+  const pitching = appState.data?.sheets?.pitching?.data || [];
+  if (pitching.length === 0) return;
+
+  const pitchers = pitching
+    .filter(p => p['姓名'])
+    .map(p => ({
+      name: p['姓名'],
+      innings: parseFloat(p['投球局數']) || 0
+    }))
+    .filter(p => p.innings > 0)
+    .sort((a, b) => b.innings - a.innings)
+    .slice(0, 10);
+
+  if (pitchers.length === 0) return;
+
+  destroyChart('innings');
+  const ctx = document.getElementById('chart-innings');
+  if (!ctx) return;
+
+  Charts.innings = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: pitchers.map(p => p.name),
+      datasets: [{
+        label: '投球局數',
+        data: pitchers.map(p => p.innings),
+        backgroundColor: 'rgba(0, 212, 255, 0.8)',
+        borderColor: '#00d4ff',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: getThemeColor('text-secondary') } },
+        y: { beginAtZero: true, ticks: { color: getThemeColor('text-secondary') } }
+      }
+    }
+  });
+}
+
+/**
+ * 投手勝敗統計圖表
+ */
+function renderPitcherRecordChart() {
+  const pitching = appState.data?.sheets?.pitching?.data || [];
+  if (pitching.length === 0) return;
+
+  const pitchers = pitching
+    .filter(p => p['姓名'])
+    .map(p => ({
+      name: p['姓名'],
+      wins: parseInt(p['勝']) || 0,
+      losses: parseInt(p['敗']) || 0
+    }))
+    .filter(p => p.wins > 0 || p.losses > 0);
+
+  if (pitchers.length === 0) return;
+
+  destroyChart('pitcherRecord');
+  const ctx = document.getElementById('chart-pitcher-record');
+  if (!ctx) return;
+
+  Charts.pitcherRecord = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: pitchers.map(p => p.name),
+      datasets: [
+        {
+          label: '勝',
+          data: pitchers.map(p => p.wins),
+          backgroundColor: 'rgba(16, 185, 129, 0.8)',
+          borderColor: '#10b981',
+          borderWidth: 1
+        },
+        {
+          label: '敗',
+          data: pitchers.map(p => p.losses),
+          backgroundColor: 'rgba(239, 68, 68, 0.8)',
+          borderColor: '#ef4444',
+          borderWidth: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { color: getThemeColor('text-secondary') } }
+      },
+      scales: {
+        x: { ticks: { color: getThemeColor('text-secondary') } },
+        y: { beginAtZero: true, ticks: { stepSize: 1, color: getThemeColor('text-secondary') } }
+      }
+    }
+  });
+}
+
+/**
+ * 刺殺/助殺排行圖表
+ */
+function renderPutoutsAssistsChart() {
+  const fielding = appState.data?.sheets?.fielding?.data || [];
+  if (fielding.length === 0) return;
+
+  const players = fielding
+    .filter(f => f['姓名'])
+    .map(f => ({
+      name: f['姓名'],
+      putouts: parseInt(f['刺殺']) || 0,
+      assists: parseInt(f['助殺']) || 0
+    }))
+    .filter(p => p.putouts > 0 || p.assists > 0)
+    .sort((a, b) => (b.putouts + b.assists) - (a.putouts + a.assists))
+    .slice(0, 10);
+
+  if (players.length === 0) return;
+
+  destroyChart('putoutsAssists');
+  const ctx = document.getElementById('chart-putouts-assists');
+  if (!ctx) return;
+
+  Charts.putoutsAssists = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: players.map(p => p.name),
+      datasets: [
+        {
+          label: '刺殺',
+          data: players.map(p => p.putouts),
+          backgroundColor: 'rgba(0, 212, 255, 0.8)',
+          borderColor: '#00d4ff',
+          borderWidth: 1
+        },
+        {
+          label: '助殺',
+          data: players.map(p => p.assists),
+          backgroundColor: 'rgba(139, 92, 246, 0.8)',
+          borderColor: '#8b5cf6',
+          borderWidth: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { color: getThemeColor('text-secondary') } }
+      },
+      scales: {
+        x: { ticks: { color: getThemeColor('text-secondary') } },
+        y: { beginAtZero: true, ticks: { color: getThemeColor('text-secondary') } }
+      }
+    }
+  });
+}
+
+/**
+ * 守備貢獻圖表
+ */
+function renderDefenseValueChart() {
+  const fielding = appState.data?.sheets?.fielding?.data || [];
+  if (fielding.length === 0) return;
+
+  const players = fielding
+    .filter(f => f['姓名'])
+    .map(f => ({
+      name: f['姓名'],
+      value: (parseInt(f['刺殺']) || 0) + (parseInt(f['助殺']) || 0) - (parseInt(f['失誤']) || 0)
+    }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 10);
+
+  if (players.length === 0) return;
+
+  destroyChart('defenseValue');
+  const ctx = document.getElementById('chart-defense-value');
+  if (!ctx) return;
+
+  Charts.defenseValue = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: players.map(p => p.name),
+      datasets: [{
+        label: '守備貢獻值',
+        data: players.map(p => p.value),
+        backgroundColor: players.map(p => p.value >= 0 ? 'rgba(16, 185, 129, 0.8)' : 'rgba(239, 68, 68, 0.8)'),
+        borderColor: players.map(p => p.value >= 0 ? '#10b981' : '#ef4444'),
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: getThemeColor('text-secondary') } },
+        y: { ticks: { color: getThemeColor('text-secondary') } }
+      }
+    }
+  });
+}
+
+/**
+ * 各場比賽得分對比圖表
+ */
+function renderGameScoresChart() {
+  const rawGames = appState.data?.sheets?.games?.data || [];
+  const games = rawGames
+    .filter(g => g['對手'] && g['對手'].trim() !== '')
+    .slice(0, 10);
+
+  if (games.length === 0) return;
+
+  destroyChart('gameScores');
+  const ctx = document.getElementById('chart-game-scores');
+  if (!ctx) return;
+
+  const labels = games.map((g, i) => `vs ${g['對手']}`);
+  const ourScores = games.map(g => parseInt(g['我方得分']) || 0);
+  const theirScores = games.map(g => parseInt(g['對方得分']) || 0);
+
+  Charts.gameScores = new Chart(ctx, {
+    type: 'bar',
+    plugins: [crosshairPlugin],
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: '我方',
+          data: ourScores,
+          backgroundColor: 'rgba(0, 212, 255, 0.8)',
+          borderColor: '#00d4ff',
+          borderWidth: 1
+        },
+        {
+          label: '對方',
+          data: theirScores,
+          backgroundColor: 'rgba(239, 68, 68, 0.8)',
+          borderColor: '#ef4444',
+          borderWidth: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { color: getThemeColor('text-secondary') } }
+      },
+      scales: {
+        x: { ticks: { color: getThemeColor('text-secondary') } },
+        y: { beginAtZero: true, ticks: { color: getThemeColor('text-secondary') } }
+      }
+    }
+  });
+}
+
+/**
+ * 團隊進攻效率圖表
+ */
+function renderTeamOffenseChart() {
+  const batting = appState.data?.sheets?.batting?.data || [];
+  if (batting.length === 0) return;
+
+  // 計算團隊整體統計
+  const totalHits = batting.reduce((sum, b) => sum + (parseInt(b['安打']) || 0), 0);
+  const totalDoubles = batting.reduce((sum, b) => sum + (parseInt(b['二壘打']) || 0), 0);
+  const totalTriples = batting.reduce((sum, b) => sum + (parseInt(b['三壘打']) || 0), 0);
+  const totalHR = batting.reduce((sum, b) => sum + (parseInt(b['全壘打']) || 0), 0);
+  const totalRBI = batting.reduce((sum, b) => sum + (parseInt(b['打點']) || 0), 0);
+  const totalSB = batting.reduce((sum, b) => sum + (parseInt(b['盜壘']) || 0), 0);
+  const totalBB = batting.reduce((sum, b) => sum + (parseInt(b['四壞球']) || 0), 0);
+
+  destroyChart('teamOffense');
+  const ctx = document.getElementById('chart-team-offense');
+  if (!ctx) return;
+
+  Charts.teamOffense = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: ['安打', '二壘打', '三壘打', '全壘打', '打點', '盜壘', '四壞球'],
+      datasets: [{
+        label: '團隊進攻數據',
+        data: [totalHits, totalDoubles, totalTriples, totalHR, totalRBI, totalSB, totalBB],
+        backgroundColor: 'rgba(0, 212, 255, 0.2)',
+        borderColor: '#00d4ff',
+        borderWidth: 2,
+        pointBackgroundColor: '#00d4ff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        r: {
+          beginAtZero: true,
+          ticks: { color: getThemeColor('text-secondary') },
+          grid: { color: getThemeColor('grid') },
+          pointLabels: { color: getThemeColor('text-secondary') }
+        }
+      }
+    }
+  });
 }
 
 /**
@@ -2315,12 +2844,12 @@ function showPlayerModal(playerIndex) {
     DOM.modalBattingStats.innerHTML = '<p class="text-text-muted">無打擊資料</p>';
   }
 
-  // 投球數據
+  // 投球數據 - 永遠顯示區塊，無資料時顯示提示
+  DOM.modalPitchingSection.classList.remove('hidden');
   const pitching = appState.data?.sheets?.pitching?.data || [];
   const playerPitching = pitching.find(p => p['背號'] === number || p['姓名'] === name);
 
   if (playerPitching) {
-    DOM.modalPitchingSection.classList.remove('hidden');
     const pitchingFields = [
       { label: '出賽', value: playerPitching['出賽'] },
       { label: '投球局數', value: playerPitching['投球局數'] },
@@ -2334,22 +2863,24 @@ function showPlayerModal(playerIndex) {
       { label: '自責分', value: playerPitching['自責分'] }
     ].filter(f => f.value !== undefined && f.value !== '');
 
-    DOM.modalPitchingStats.innerHTML = pitchingFields.map(f => `
-      <div class="bg-dark-bg p-2 rounded text-center border border-dark-border">
-        <p class="text-text-muted text-xs">${f.label}</p>
-        <p class="font-bold text-success">${f.value}</p>
-      </div>
-    `).join('') || '<p class="text-text-muted">無資料</p>';
+    DOM.modalPitchingStats.innerHTML = pitchingFields.length > 0
+      ? pitchingFields.map(f => `
+        <div class="bg-dark-bg p-2 rounded text-center border border-dark-border">
+          <p class="text-text-muted text-xs">${f.label}</p>
+          <p class="font-bold text-success">${f.value}</p>
+        </div>
+      `).join('')
+      : '<p class="text-text-muted col-span-full text-center py-2">無投球資料</p>';
   } else {
-    DOM.modalPitchingSection.classList.add('hidden');
+    DOM.modalPitchingStats.innerHTML = '<p class="text-text-muted col-span-full text-center py-2">無投球資料</p>';
   }
 
-  // 守備數據
+  // 守備數據 - 永遠顯示區塊，無資料時顯示提示
+  DOM.modalFieldingSection.classList.remove('hidden');
   const fielding = appState.data?.sheets?.fielding?.data || [];
   const playerFielding = fielding.find(f => f['背號'] === number || f['姓名'] === name);
 
   if (playerFielding) {
-    DOM.modalFieldingSection.classList.remove('hidden');
     const fieldingFields = [
       { label: '守位', value: playerFielding['守位'] },
       { label: '出賽', value: playerFielding['出賽'] },
@@ -2359,14 +2890,16 @@ function showPlayerModal(playerIndex) {
       { label: '守備率', value: playerFielding['守備率'] }
     ].filter(f => f.value !== undefined && f.value !== '');
 
-    DOM.modalFieldingStats.innerHTML = fieldingFields.map(f => `
-      <div class="bg-dark-bg p-2 rounded text-center border border-dark-border">
-        <p class="text-text-muted text-xs">${f.label}</p>
-        <p class="font-bold text-warning">${f.value}</p>
-      </div>
-    `).join('') || '<p class="text-text-muted">無資料</p>';
+    DOM.modalFieldingStats.innerHTML = fieldingFields.length > 0
+      ? fieldingFields.map(f => `
+        <div class="bg-dark-bg p-2 rounded text-center border border-dark-border">
+          <p class="text-text-muted text-xs">${f.label}</p>
+          <p class="font-bold text-warning">${f.value}</p>
+        </div>
+      `).join('')
+      : '<p class="text-text-muted col-span-full text-center py-2">無守備資料</p>';
   } else {
-    DOM.modalFieldingSection.classList.add('hidden');
+    DOM.modalFieldingStats.innerHTML = '<p class="text-text-muted col-span-full text-center py-2">無守備資料</p>';
   }
 
   // 顯示 Modal
@@ -2393,6 +2926,9 @@ function onModalAskAI() {
 
   // 關閉 Modal
   hidePlayerModal();
+
+  // 切換到 AI 對話頁面
+  navigateToSection('ai');
 
   // 開始新話題並送出分析請求
   startNewConversation();
