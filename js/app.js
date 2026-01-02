@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.6.0 - 新增 15 個專業分析圖表 (OPS, SLG, ISO, WHIP, K/9 等)
+// 版本: 2.6.1 - 修復圖表 crosshair 垂直虛線顯示問題，優化對手戰績圖表資料處理
 // ============================================================
 
 // API 基礎 URL
@@ -2578,6 +2578,7 @@ function renderOPSChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
         tooltip: {
@@ -2648,6 +2649,7 @@ function renderSLGChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: true, labels: { color: getThemeColor('text-secondary') } }
       },
@@ -2712,6 +2714,7 @@ function renderISOChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
         tooltip: {
@@ -2847,6 +2850,7 @@ function renderKPctChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
         tooltip: {
@@ -2913,6 +2917,7 @@ function renderBBPctChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
         tooltip: {
@@ -3105,6 +3110,7 @@ function renderWHIPChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
         tooltip: {
@@ -3172,6 +3178,7 @@ function renderK9Chart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
         tooltip: {
@@ -3239,6 +3246,7 @@ function renderBB9Chart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
         tooltip: {
@@ -3306,6 +3314,7 @@ function renderKBBRatioChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
         tooltip: {
@@ -3389,6 +3398,7 @@ function renderPutoutsAssistsChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { position: 'top', labels: { color: getThemeColor('text-secondary') } }
       },
@@ -3451,6 +3461,7 @@ function renderDefenseValueChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: { legend: { display: true, labels: { color: getThemeColor('text-secondary') } } },
       scales: {
         x: { ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } },
@@ -3517,6 +3528,7 @@ function renderPosFieldingChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
         tooltip: {
@@ -3590,6 +3602,7 @@ function renderRangeFactorChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
         tooltip: {
@@ -3669,6 +3682,7 @@ function renderGameScoresChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { position: 'top', labels: { color: getThemeColor('text-secondary') } }
       },
@@ -3733,18 +3747,19 @@ function renderTeamOffenseChart() {
  * 對手戰績分析圖表
  */
 function renderOpponentChart() {
-  const games = appState.data?.sheets?.games?.data || [];
+  const rawGames = appState.data?.sheets?.games?.data || [];
   const ctx = document.getElementById('chart-opponent');
   if (!ctx) return;
 
+  // 過濾有效比賽資料 (與 renderGameScoresChart 一致)
+  const validGames = rawGames.filter(g => g['對手'] && g['對手'].trim() !== '');
+
   // 依對手分組統計
   const opponentStats = {};
-  games.forEach(g => {
-    const opp = getField(g, '對手');
-    if (!opp) return;
-
-    const ourScore = getIntField(g, '我方得分');
-    const theirScore = getIntField(g, '對方得分');
+  validGames.forEach(g => {
+    const opp = g['對手'].trim();
+    const ourScore = parseInt(g['我方得分']) || 0;
+    const theirScore = parseInt(g['對方得分']) || 0;
 
     if (!opponentStats[opp]) {
       opponentStats[opp] = { wins: 0, losses: 0, ties: 0, runsFor: 0, runsAgainst: 0 };
@@ -3875,6 +3890,7 @@ function renderRunsEffChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
         tooltip: {
@@ -3941,6 +3957,7 @@ function renderRbiEffChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
         tooltip: {
