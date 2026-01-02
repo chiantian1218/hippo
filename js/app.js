@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.5.1 - 修復空白圖表、統一無資料提示格式
+// 版本: 2.5.2 - 熱血火球登入 Logo、修復空白圖表
 // ============================================================
 
 // API 基礎 URL
@@ -11,6 +11,20 @@ const API_BASE = 'https://green-rain-9aba.chiantian.workers.dev';
 // ============================================================
 const Icons = {
   baseball: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93c4.08 4.08 4.08 10.06 0 14.14"/><path d="M19.07 4.93c-4.08 4.08-4.08 10.06 0 14.14"/></svg>`,
+
+  // 火球棒球 - 大尺寸、火焰配色
+  firebaseball: `<svg class="fireball-icon" viewBox="0 0 24 24" fill="none" stroke="url(#fireGradient)" stroke-width="2.5">
+    <defs>
+      <linearGradient id="fireGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+        <stop offset="0%" style="stop-color:#ff6b35"/>
+        <stop offset="50%" style="stop-color:#ff8c42"/>
+        <stop offset="100%" style="stop-color:#ffd700"/>
+      </linearGradient>
+    </defs>
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M4.93 4.93c4.08 4.08 4.08 10.06 0 14.14"/>
+    <path d="M19.07 4.93c-4.08 4.08-4.08 10.06 0 14.14"/>
+  </svg>`,
 
   refresh: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`,
 
@@ -476,9 +490,9 @@ function initIcons() {
     if (moonIcon) moonIcon.innerHTML = Icons.moon;
   }
 
-  // Login section icons
+  // Login section icons - 使用火球棒球
   const loginLogo = document.getElementById('login-logo');
-  if (loginLogo) loginLogo.innerHTML = Icons.baseball;
+  if (loginLogo) loginLogo.innerHTML = Icons.firebaseball;
 
   const loginBtnIcon = document.getElementById('login-btn-icon');
   if (loginBtnIcon) loginBtnIcon.innerHTML = Icons.lock;
