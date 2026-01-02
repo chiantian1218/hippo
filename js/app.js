@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.1.4 - 診斷 parsed + vScale
+// 版本: 2.1.5 - 改用 beginAtZero + suggestedMax
 // ============================================================
 
 // API 基礎 URL
@@ -1405,8 +1405,8 @@ function renderBattingOBPChart() {
           grid: { color: 'rgba(55, 65, 81, 0.5)' }
         },
         y: {
-          min: 0,
-          max: 1,
+          beginAtZero: true,
+          suggestedMax: 1,
           ticks: { color: '#9ca3af' },
           grid: { color: 'rgba(55, 65, 81, 0.5)' }
         }
