@@ -1401,6 +1401,9 @@ function renderBattingOBPChart() {
   if (batting.length > 0) {
     console.log('打擊資料欄位:', Object.keys(batting[0]));
     console.log('第一筆打擊資料:', batting[0]);
+    // 測試 getNumericField
+    const testValue = getNumericField(batting[0], '打擊率');
+    console.log('getNumericField 測試 - 打擊率:', testValue, typeof testValue);
   } else {
     console.warn('renderBattingOBPChart: 無打擊資料');
     return;
@@ -1428,10 +1431,19 @@ function renderBattingOBPChart() {
   const avgData = sorted.map(b => getNumericField(b, '打擊率'));
   const obpData = sorted.map(b => getNumericField(b, '上壘率'));
 
+  // 調試：顯示圖表數據
+  console.log('打擊率圖表 - 篩選後球員數:', sorted.length);
+  console.log('打擊率圖表 - labels:', labels);
+  console.log('打擊率圖表 - avgData:', avgData);
+  console.log('打擊率圖表 - obpData:', obpData);
+
   destroyChart('battingOBP');
 
   const ctx = document.getElementById('chart-batting-obp');
-  if (!ctx) return;
+  if (!ctx) {
+    console.warn('renderBattingOBPChart: 找不到 canvas 元素 #chart-batting-obp');
+    return;
+  }
 
   Charts.battingOBP = new Chart(ctx, {
     type: 'bar',
@@ -1481,6 +1493,8 @@ function renderBattingOBPChart() {
       }
     }
   });
+
+  console.log('打擊率圖表 - Chart 創建成功:', Charts.battingOBP ? '是' : '否');
 
   // 雙擊重置縮放
   ctx.ondblclick = () => resetChartZoom(Charts.battingOBP);
@@ -1622,10 +1636,18 @@ function renderERAChart() {
   const labels = sorted.map(p => getField(p, '姓名') || '未知');
   const eraData = sorted.map(p => getNumericField(p, '防禦率'));
 
+  // 調試：顯示圖表數據
+  console.log('防禦率圖表 - 篩選後投手數:', sorted.length);
+  console.log('防禦率圖表 - labels:', labels);
+  console.log('防禦率圖表 - eraData:', eraData);
+
   destroyChart('era');
 
   const ctx = document.getElementById('chart-era');
-  if (!ctx) return;
+  if (!ctx) {
+    console.warn('renderERAChart: 找不到 canvas 元素 #chart-era');
+    return;
+  }
 
   Charts.era = new Chart(ctx, {
     type: 'bar',
