@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.5.0 - 豐富統計與圖表內容、多項 UI/UX 改善
+// 版本: 2.5.1 - 修復空白圖表、統一無資料提示格式
 // ============================================================
 
 // API 基礎 URL
@@ -2033,7 +2033,7 @@ function renderErrorsChart() {
     const ctx = document.getElementById('chart-errors');
     if (ctx) {
       const parent = ctx.parentElement;
-      parent.innerHTML = '<p class="text-text-muted text-center py-8">無失誤記錄 - 表現完美！</p>';
+      parent.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">無失誤記錄 - 表現完美！</div>';
     }
     return;
   }
@@ -2294,11 +2294,12 @@ function renderWinLossChart() {
 }
 
 /**
- * 得分/打點排行圖表
+ * 得分/打點排行圖表 (使用 line chart 避免 bar chart 渲染問題)
  */
 function renderRunsRbiChart() {
   const batting = appState.data?.sheets?.batting?.data || [];
-  if (batting.length === 0) return;
+  const ctx = document.getElementById('chart-runs-rbi');
+  if (!ctx) return;
 
   // 過濾有效數據並排序
   const players = batting
@@ -2312,14 +2313,15 @@ function renderRunsRbiChart() {
     .sort((a, b) => (b.runs + b.rbi) - (a.runs + a.rbi))
     .slice(0, 10);
 
-  if (players.length === 0) return;
-
   destroyChart('runsRbi');
-  const ctx = document.getElementById('chart-runs-rbi');
-  if (!ctx) return;
+
+  if (players.length === 0) {
+    ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無得分/打點資料</div>';
+    return;
+  }
 
   Charts.runsRbi = new Chart(ctx, {
-    type: 'bar',
+    type: 'line',
     plugins: [crosshairPlugin],
     data: {
       labels: players.map(p => p.name),
@@ -2327,22 +2329,31 @@ function renderRunsRbiChart() {
         {
           label: '得分',
           data: players.map(p => p.runs),
-          backgroundColor: 'rgba(0, 212, 255, 0.8)',
           borderColor: '#00d4ff',
-          borderWidth: 1
+          backgroundColor: 'rgba(0, 212, 255, 0.2)',
+          borderWidth: 3,
+          pointRadius: 6,
+          pointBackgroundColor: '#00d4ff',
+          tension: 0.1,
+          fill: false
         },
         {
           label: '打點',
           data: players.map(p => p.rbi),
-          backgroundColor: 'rgba(139, 92, 246, 0.8)',
           borderColor: '#8b5cf6',
-          borderWidth: 1
+          backgroundColor: 'rgba(139, 92, 246, 0.2)',
+          borderWidth: 3,
+          pointRadius: 6,
+          pointBackgroundColor: '#8b5cf6',
+          tension: 0.1,
+          fill: false
         }
       ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { position: 'top', labels: { color: getThemeColor('text-secondary') } }
       },
@@ -2359,7 +2370,8 @@ function renderRunsRbiChart() {
  */
 function renderBbKChart() {
   const batting = appState.data?.sheets?.batting?.data || [];
-  if (batting.length === 0) return;
+  const ctx = document.getElementById('chart-bb-k');
+  if (!ctx) return;
 
   const players = batting
     .filter(b => b['姓名'])
@@ -2372,36 +2384,47 @@ function renderBbKChart() {
     .sort((a, b) => b.bb - a.bb)
     .slice(0, 10);
 
-  if (players.length === 0) return;
-
   destroyChart('bbK');
-  const ctx = document.getElementById('chart-bb-k');
-  if (!ctx) return;
+
+  if (players.length === 0) {
+    ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無選球資料</div>';
+    return;
+  }
 
   Charts.bbK = new Chart(ctx, {
-    type: 'bar',
+    type: 'line',
+    plugins: [crosshairPlugin],
     data: {
       labels: players.map(p => p.name),
       datasets: [
         {
           label: '四壞球',
           data: players.map(p => p.bb),
-          backgroundColor: 'rgba(16, 185, 129, 0.8)',
           borderColor: '#10b981',
-          borderWidth: 1
+          backgroundColor: 'rgba(16, 185, 129, 0.2)',
+          borderWidth: 3,
+          pointRadius: 6,
+          pointBackgroundColor: '#10b981',
+          tension: 0.1,
+          fill: false
         },
         {
           label: '三振',
           data: players.map(p => p.k),
-          backgroundColor: 'rgba(239, 68, 68, 0.8)',
           borderColor: '#ef4444',
-          borderWidth: 1
+          backgroundColor: 'rgba(239, 68, 68, 0.2)',
+          borderWidth: 3,
+          pointRadius: 6,
+          pointBackgroundColor: '#ef4444',
+          tension: 0.1,
+          fill: false
         }
       ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { position: 'top', labels: { color: getThemeColor('text-secondary') } }
       },
@@ -2418,7 +2441,8 @@ function renderBbKChart() {
  */
 function renderInningsChart() {
   const pitching = appState.data?.sheets?.pitching?.data || [];
-  if (pitching.length === 0) return;
+  const ctx = document.getElementById('chart-innings');
+  if (!ctx) return;
 
   const pitchers = pitching
     .filter(p => p['姓名'])
@@ -2430,27 +2454,34 @@ function renderInningsChart() {
     .sort((a, b) => b.innings - a.innings)
     .slice(0, 10);
 
-  if (pitchers.length === 0) return;
-
   destroyChart('innings');
-  const ctx = document.getElementById('chart-innings');
-  if (!ctx) return;
+
+  if (pitchers.length === 0) {
+    ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無投球局數資料</div>';
+    return;
+  }
 
   Charts.innings = new Chart(ctx, {
-    type: 'bar',
+    type: 'line',
+    plugins: [crosshairPlugin],
     data: {
       labels: pitchers.map(p => p.name),
       datasets: [{
         label: '投球局數',
         data: pitchers.map(p => p.innings),
-        backgroundColor: 'rgba(0, 212, 255, 0.8)',
         borderColor: '#00d4ff',
-        borderWidth: 1
+        backgroundColor: 'rgba(0, 212, 255, 0.2)',
+        borderWidth: 3,
+        pointRadius: 6,
+        pointBackgroundColor: '#00d4ff',
+        tension: 0.1,
+        fill: true
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: { legend: { display: false } },
       scales: {
         x: { ticks: { color: getThemeColor('text-secondary') } },
@@ -2465,7 +2496,8 @@ function renderInningsChart() {
  */
 function renderPitcherRecordChart() {
   const pitching = appState.data?.sheets?.pitching?.data || [];
-  if (pitching.length === 0) return;
+  const ctx = document.getElementById('chart-pitcher-record');
+  if (!ctx) return;
 
   const pitchers = pitching
     .filter(p => p['姓名'])
@@ -2476,36 +2508,47 @@ function renderPitcherRecordChart() {
     }))
     .filter(p => p.wins > 0 || p.losses > 0);
 
-  if (pitchers.length === 0) return;
-
   destroyChart('pitcherRecord');
-  const ctx = document.getElementById('chart-pitcher-record');
-  if (!ctx) return;
+
+  if (pitchers.length === 0) {
+    ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無投手勝敗資料</div>';
+    return;
+  }
 
   Charts.pitcherRecord = new Chart(ctx, {
-    type: 'bar',
+    type: 'line',
+    plugins: [crosshairPlugin],
     data: {
       labels: pitchers.map(p => p.name),
       datasets: [
         {
           label: '勝',
           data: pitchers.map(p => p.wins),
-          backgroundColor: 'rgba(16, 185, 129, 0.8)',
           borderColor: '#10b981',
-          borderWidth: 1
+          backgroundColor: 'rgba(16, 185, 129, 0.2)',
+          borderWidth: 3,
+          pointRadius: 6,
+          pointBackgroundColor: '#10b981',
+          tension: 0.1,
+          fill: false
         },
         {
           label: '敗',
           data: pitchers.map(p => p.losses),
-          backgroundColor: 'rgba(239, 68, 68, 0.8)',
           borderColor: '#ef4444',
-          borderWidth: 1
+          backgroundColor: 'rgba(239, 68, 68, 0.2)',
+          borderWidth: 3,
+          pointRadius: 6,
+          pointBackgroundColor: '#ef4444',
+          tension: 0.1,
+          fill: false
         }
       ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { position: 'top', labels: { color: getThemeColor('text-secondary') } }
       },
@@ -2521,8 +2564,10 @@ function renderPitcherRecordChart() {
  * 刺殺/助殺排行圖表
  */
 function renderPutoutsAssistsChart() {
+  const ctx = document.getElementById('chart-putouts-assists');
+  if (!ctx) return;
+
   const fielding = appState.data?.sheets?.fielding?.data || [];
-  if (fielding.length === 0) return;
 
   const players = fielding
     .filter(f => f['姓名'])
@@ -2535,30 +2580,44 @@ function renderPutoutsAssistsChart() {
     .sort((a, b) => (b.putouts + b.assists) - (a.putouts + a.assists))
     .slice(0, 10);
 
-  if (players.length === 0) return;
-
   destroyChart('putoutsAssists');
-  const ctx = document.getElementById('chart-putouts-assists');
-  if (!ctx) return;
+
+  // 無資料時顯示提示
+  if (players.length === 0) {
+    const container = ctx.parentElement;
+    if (container) {
+      container.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無刺殺/助殺資料</div>';
+    }
+    return;
+  }
 
   Charts.putoutsAssists = new Chart(ctx, {
-    type: 'bar',
+    type: 'line',
+    plugins: [crosshairPlugin],
     data: {
       labels: players.map(p => p.name),
       datasets: [
         {
           label: '刺殺',
           data: players.map(p => p.putouts),
-          backgroundColor: 'rgba(0, 212, 255, 0.8)',
+          backgroundColor: 'rgba(0, 212, 255, 0.2)',
           borderColor: '#00d4ff',
-          borderWidth: 1
+          borderWidth: 2,
+          tension: 0.3,
+          fill: true,
+          pointRadius: 4,
+          pointBackgroundColor: '#00d4ff'
         },
         {
           label: '助殺',
           data: players.map(p => p.assists),
-          backgroundColor: 'rgba(139, 92, 246, 0.8)',
+          backgroundColor: 'rgba(139, 92, 246, 0.2)',
           borderColor: '#8b5cf6',
-          borderWidth: 1
+          borderWidth: 2,
+          tension: 0.3,
+          fill: true,
+          pointRadius: 4,
+          pointBackgroundColor: '#8b5cf6'
         }
       ]
     },
@@ -2569,8 +2628,8 @@ function renderPutoutsAssistsChart() {
         legend: { position: 'top', labels: { color: getThemeColor('text-secondary') } }
       },
       scales: {
-        x: { ticks: { color: getThemeColor('text-secondary') } },
-        y: { beginAtZero: true, ticks: { color: getThemeColor('text-secondary') } }
+        x: { ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } },
+        y: { beginAtZero: true, ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } }
       }
     }
   });
@@ -2580,8 +2639,10 @@ function renderPutoutsAssistsChart() {
  * 守備貢獻圖表
  */
 function renderDefenseValueChart() {
+  const ctx = document.getElementById('chart-defense-value');
+  if (!ctx) return;
+
   const fielding = appState.data?.sheets?.fielding?.data || [];
-  if (fielding.length === 0) return;
 
   const players = fielding
     .filter(f => f['姓名'])
@@ -2589,34 +2650,46 @@ function renderDefenseValueChart() {
       name: f['姓名'],
       value: (parseInt(f['刺殺']) || 0) + (parseInt(f['助殺']) || 0) - (parseInt(f['失誤']) || 0)
     }))
+    .filter(p => p.value !== 0)
     .sort((a, b) => b.value - a.value)
     .slice(0, 10);
 
-  if (players.length === 0) return;
-
   destroyChart('defenseValue');
-  const ctx = document.getElementById('chart-defense-value');
-  if (!ctx) return;
+
+  // 無資料時顯示提示
+  if (players.length === 0) {
+    const container = ctx.parentElement;
+    if (container) {
+      container.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無守備貢獻資料</div>';
+    }
+    return;
+  }
 
   Charts.defenseValue = new Chart(ctx, {
-    type: 'bar',
+    type: 'line',
+    plugins: [crosshairPlugin],
     data: {
       labels: players.map(p => p.name),
       datasets: [{
-        label: '守備貢獻值',
+        label: '守備貢獻值 (刺殺+助殺-失誤)',
         data: players.map(p => p.value),
-        backgroundColor: players.map(p => p.value >= 0 ? 'rgba(16, 185, 129, 0.8)' : 'rgba(239, 68, 68, 0.8)'),
-        borderColor: players.map(p => p.value >= 0 ? '#10b981' : '#ef4444'),
-        borderWidth: 1
+        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+        borderColor: '#10b981',
+        borderWidth: 2,
+        tension: 0.3,
+        fill: true,
+        pointRadius: 5,
+        pointBackgroundColor: players.map(p => p.value >= 0 ? '#10b981' : '#ef4444'),
+        pointBorderColor: players.map(p => p.value >= 0 ? '#10b981' : '#ef4444')
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: { legend: { display: true, labels: { color: getThemeColor('text-secondary') } } },
       scales: {
-        x: { ticks: { color: getThemeColor('text-secondary') } },
-        y: { ticks: { color: getThemeColor('text-secondary') } }
+        x: { ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } },
+        y: { ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } }
       }
     }
   });
@@ -2626,40 +2699,56 @@ function renderDefenseValueChart() {
  * 各場比賽得分對比圖表
  */
 function renderGameScoresChart() {
+  const ctx = document.getElementById('chart-game-scores');
+  if (!ctx) return;
+
   const rawGames = appState.data?.sheets?.games?.data || [];
   const games = rawGames
     .filter(g => g['對手'] && g['對手'].trim() !== '')
     .slice(0, 10);
 
-  if (games.length === 0) return;
-
   destroyChart('gameScores');
-  const ctx = document.getElementById('chart-game-scores');
-  if (!ctx) return;
+
+  // 無資料時顯示提示
+  if (games.length === 0) {
+    const container = ctx.parentElement;
+    if (container) {
+      container.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無比賽資料</div>';
+    }
+    return;
+  }
 
   const labels = games.map((g, i) => `vs ${g['對手']}`);
   const ourScores = games.map(g => parseInt(g['我方得分']) || 0);
   const theirScores = games.map(g => parseInt(g['對方得分']) || 0);
 
   Charts.gameScores = new Chart(ctx, {
-    type: 'bar',
+    type: 'line',
     plugins: [crosshairPlugin],
     data: {
       labels: labels,
       datasets: [
         {
-          label: '我方',
+          label: '我方得分',
           data: ourScores,
-          backgroundColor: 'rgba(0, 212, 255, 0.8)',
+          backgroundColor: 'rgba(0, 212, 255, 0.2)',
           borderColor: '#00d4ff',
-          borderWidth: 1
+          borderWidth: 2,
+          tension: 0.3,
+          fill: true,
+          pointRadius: 5,
+          pointBackgroundColor: '#00d4ff'
         },
         {
-          label: '對方',
+          label: '對方得分',
           data: theirScores,
-          backgroundColor: 'rgba(239, 68, 68, 0.8)',
+          backgroundColor: 'rgba(239, 68, 68, 0.2)',
           borderColor: '#ef4444',
-          borderWidth: 1
+          borderWidth: 2,
+          tension: 0.3,
+          fill: true,
+          pointRadius: 5,
+          pointBackgroundColor: '#ef4444'
         }
       ]
     },
@@ -2670,8 +2759,8 @@ function renderGameScoresChart() {
         legend: { position: 'top', labels: { color: getThemeColor('text-secondary') } }
       },
       scales: {
-        x: { ticks: { color: getThemeColor('text-secondary') } },
-        y: { beginAtZero: true, ticks: { color: getThemeColor('text-secondary') } }
+        x: { ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } },
+        y: { beginAtZero: true, ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } }
       }
     }
   });
