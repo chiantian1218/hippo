@@ -1445,50 +1445,100 @@ function renderBattingOBPChart() {
     return;
   }
 
-  // 調試：檢查 Chart.js
-  console.log('=== 打擊率圖表調試 ===');
-  console.log('1. Chart.js 載入:', typeof Chart !== 'undefined' ? '是' : '否');
-  console.log('2. Chart.js 版本:', typeof Chart !== 'undefined' ? Chart.version : 'N/A');
-  console.log('3. Canvas 元素:', ctx);
-  console.log('4. Canvas 父容器尺寸:', ctx.parentElement.offsetWidth, 'x', ctx.parentElement.offsetHeight);
-  console.log('5. Labels:', labels);
-  console.log('6. Data:', avgData);
+  // 調試：檢查 Chart.js 註冊狀態
+  console.log('=== Chart.js 調試 ===');
+  console.log('Chart.js 版本:', Chart.version);
+  console.log('已註冊控制器:', Object.keys(Chart.registry?.controllers || {}));
+  console.log('已註冊元素:', Object.keys(Chart.registry?.elements || {}));
+  console.log('已註冊縮放:', Object.keys(Chart.registry?.scales || {}));
 
-  // 硬編碼測試數據
-  const testLabels = ['A', 'B', 'C', 'D'];
-  const testData = [0.5, 0.3, 0.7, 0.4];
+  // 確保 Bar 相關組件已註冊
+  if (Chart.registry) {
+    console.log('BarController:', Chart.registry.controllers.bar ? '已註冊' : '未註冊');
+    console.log('BarElement:', Chart.registry.elements.bar ? '已註冊' : '未註冊');
+  }
 
   try {
     Charts.battingOBP = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: testLabels,  // 使用硬編碼測試數據
-        datasets: [{
-          label: '測試數據',
-          data: testData,     // 使用硬編碼測試數據
-          backgroundColor: ['red', 'blue', 'green', 'orange']
-        }]
+        labels: labels,
+        datasets: [
+          {
+            label: '打擊率 AVG',
+            data: avgData,
+            backgroundColor: 'rgba(88, 166, 255, 0.8)',
+            borderColor: 'rgba(88, 166, 255, 1)',
+            borderWidth: 1,
+            barPercentage: 0.8,
+            categoryPercentage: 0.9
+          },
+          {
+            label: '上壘率 OBP',
+            data: obpData,
+            backgroundColor: 'rgba(139, 92, 246, 0.8)',
+            borderColor: 'rgba(139, 92, 246, 1)',
+            borderWidth: 1,
+            barPercentage: 0.8,
+            categoryPercentage: 0.9
+          }
+        ]
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
-          legend: { display: true }
+          legend: {
+            display: true,
+            position: 'top',
+            labels: { color: '#9ca3af' }
+          }
         },
         scales: {
-          y: { beginAtZero: true, max: 1 }
+          x: {
+            ticks: { color: '#9ca3af' },
+            grid: { color: 'rgba(55, 65, 81, 0.5)' }
+          },
+          y: {
+            beginAtZero: true,
+            max: 1,
+            ticks: {
+              color: '#9ca3af',
+              callback: function(value) {
+                return value.toFixed(2);
+              }
+            },
+            grid: { color: 'rgba(55, 65, 81, 0.5)' }
+          }
         }
       }
     });
 
-    console.log('7. Chart 創建:', Charts.battingOBP ? '成功' : '失敗');
-    console.log('8. Chart canvas:', Charts.battingOBP.canvas);
-    console.log('9. Chart width:', Charts.battingOBP.width);
-    console.log('10. Chart height:', Charts.battingOBP.height);
-    console.log('=== 調試結束 ===');
+    console.log('打擊率圖表創建成功');
+
+    // 調試：檢查數據集
+    const datasets = Charts.battingOBP.data.datasets;
+    console.log('數據集數量:', datasets.length);
+    datasets.forEach((ds, i) => {
+      console.log(`數據集 ${i}:`, ds.label, ds.data, 'hidden:', ds.hidden);
+    });
+
+    // 強制更新和渲染
+    Charts.battingOBP.update('none');
+    Charts.battingOBP.render();
+
+    // 檢查渲染後的狀態
+    const meta = Charts.battingOBP.getDatasetMeta(0);
+    console.log('Meta data:', meta);
+    console.log('Bar elements:', meta.data);
+    if (meta.data.length > 0) {
+      console.log('第一個 bar 元素:', meta.data[0]);
+      console.log('第一個 bar x:', meta.data[0].x, 'y:', meta.data[0].y);
+      console.log('第一個 bar width:', meta.data[0].width, 'height:', meta.data[0].height);
+    }
 
   } catch (error) {
     console.error('Chart 創建錯誤:', error);
-    console.error('錯誤堆疊:', error.stack);
   }
 
   // 雙擊重置縮放
