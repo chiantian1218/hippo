@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.1.0 - 修復 bar chart (移除 chartjs-plugin-zoom)
+// 版本: 2.1.1 - 修復 updateChartsTheme 遞迴錯誤
 // ============================================================
 
 // API 基礎 URL
@@ -284,40 +284,10 @@ function updateChartsTheme(theme) {
     Chart.defaults.borderColor = gridColor;
   }
 
-  // 重新渲染現有圖表
-  Object.entries(Charts).forEach(([key, chart]) => {
-    if (chart) {
-      chart.options.scales = chart.options.scales || {};
-
-      // 處理雷達圖的特殊結構
-      if (key === 'radar' && chart.options.scales.r) {
-        const r = chart.options.scales.r;
-        r.ticks = r.ticks || {};
-        r.ticks.color = textSecondary;
-        r.ticks.backdropColor = 'transparent';
-        r.grid = r.grid || {};
-        r.grid.color = gridColor;
-        r.angleLines = r.angleLines || {};
-        r.angleLines.color = gridColor;
-        r.pointLabels = r.pointLabels || {};
-        r.pointLabels.color = textColor;
-      } else {
-        // 處理一般圖表
-        Object.values(chart.options.scales).forEach(scale => {
-          scale.ticks = scale.ticks || {};
-          scale.ticks.color = textSecondary;
-          scale.grid = scale.grid || {};
-          scale.grid.color = gridColor;
-        });
-      }
-
-      if (chart.options.plugins && chart.options.plugins.legend) {
-        chart.options.plugins.legend.labels = chart.options.plugins.legend.labels || {};
-        chart.options.plugins.legend.labels.color = textColor;
-      }
-      chart.update();
-    }
-  });
+  // 重新渲染所有圖表（簡單方式：銷毀後重建）
+  if (appState.data) {
+    renderAllCharts();
+  }
 }
 
 /**
@@ -1363,8 +1333,12 @@ function destroyChart(chartName) {
  * 打擊率 vs 上壘率圖表
  */
 function renderBattingOBPChart() {
+  console.log('[OBP] 開始渲染');
   const batting = appState.data?.sheets?.batting?.data || [];
-  if (batting.length === 0) return;
+  if (batting.length === 0) {
+    console.log('[OBP] 無資料');
+    return;
+  }
 
   // 取前 8 名有打擊率的球員
   const sorted = [...batting]
@@ -1372,18 +1346,29 @@ function renderBattingOBPChart() {
     .sort((a, b) => getNumericField(b, '打擊率') - getNumericField(a, '打擊率'))
     .slice(0, 8);
 
-  if (sorted.length === 0) return;
+  if (sorted.length === 0) {
+    console.log('[OBP] 過濾後無資料');
+    return;
+  }
+
+  console.log('[OBP] 球員數:', sorted.length);
 
   const labels = sorted.map(b => getField(b, '姓名') || '未知');
   const avgData = sorted.map(b => getNumericField(b, '打擊率'));
   const obpData = sorted.map(b => getNumericField(b, '上壘率'));
 
+  console.log('[OBP] avgData:', avgData);
+
   destroyChart('battingOBP');
 
   const ctx = document.getElementById('chart-batting-obp');
-  if (!ctx) return;
+  if (!ctx) {
+    console.log('[OBP] 找不到 canvas');
+    return;
+  }
 
-  Charts.battingOBP = new Chart(ctx, {
+  try {
+    Charts.battingOBP = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: labels,
@@ -1428,6 +1413,10 @@ function renderBattingOBPChart() {
       }
     }
   });
+    console.log('[OBP] 圖表創建成功');
+  } catch (err) {
+    console.error('[OBP] 創建失敗:', err);
+  }
 }
 
 /**
