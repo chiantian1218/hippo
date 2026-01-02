@@ -791,54 +791,6 @@ function initMobileNav() {
     });
   });
 
-  // ===== 滑動手勢支援 =====
-  let touchStartX = 0;
-  let touchStartY = 0;
-  let touchEndX = 0;
-  let touchEndY = 0;
-  const minSwipeDistance = 50;  // 最小滑動距離
-  const maxVerticalDistance = 100;  // 垂直容忍距離
-
-  function handleTouchStart(e) {
-    touchStartX = e.changedTouches[0].screenX;
-    touchStartY = e.changedTouches[0].screenY;
-  }
-
-  function handleTouchEnd(e) {
-    touchEndX = e.changedTouches[0].screenX;
-    touchEndY = e.changedTouches[0].screenY;
-    handleSwipe();
-  }
-
-  function handleSwipe() {
-    const deltaX = touchEndX - touchStartX;
-    const deltaY = Math.abs(touchEndY - touchStartY);
-
-    // 只有在手機版且水平滑動距離足夠、垂直滑動不過大時觸發
-    if (window.innerWidth >= 640) return;
-    if (Math.abs(deltaX) < minSwipeDistance) return;
-    if (deltaY > maxVerticalDistance) return;
-
-    if (deltaX > 0) {
-      // 向右滑 → 上一個 Tab
-      if (currentSectionIndex > 0) {
-        switchToSection(sectionOrder[currentSectionIndex - 1]);
-      }
-    } else {
-      // 向左滑 → 下一個 Tab
-      if (currentSectionIndex < sectionOrder.length - 1) {
-        switchToSection(sectionOrder[currentSectionIndex + 1]);
-      }
-    }
-  }
-
-  // 綁定觸控事件到主內容區
-  const mainContent = document.getElementById('main-content');
-  if (mainContent) {
-    mainContent.addEventListener('touchstart', handleTouchStart, { passive: true });
-    mainContent.addEventListener('touchend', handleTouchEnd, { passive: true });
-  }
-
   // 監聽視窗大小變化
   window.addEventListener('resize', checkMobileView);
 
@@ -961,9 +913,10 @@ function bindEvents() {
   // 送出問題按鈕
   DOM.btnSubmitQuestion.addEventListener('click', onSubmitQuestion);
 
-  // Enter 鍵送出問題
-  DOM.questionInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
+  // Ctrl+Enter 或 Cmd+Enter 送出問題 (Enter 單獨按下可換行)
+  DOM.questionInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
       onSubmitQuestion();
     }
   });
