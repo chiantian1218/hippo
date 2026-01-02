@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.2.7 - ERA/守備率改用折線圖 + crosshair
+// 版本: 2.2.8 - 增強 ERA/守備率 debug log
 // ============================================================
 
 // API 基礎 URL
@@ -1584,12 +1584,19 @@ function renderExtraBaseChart() {
  */
 function renderERAChart() {
   console.log('[ERA] 開始渲染');
+  console.log('[ERA] pitching sheet:', appState.data?.sheets?.pitching);
+
   const pitching = appState.data?.sheets?.pitching?.data || [];
   console.log('[ERA] pitching 資料筆數:', pitching.length);
 
   if (pitching.length === 0) {
     console.log('[ERA] 無投手資料');
     return;
+  }
+
+  // 顯示第一筆資料的欄位名稱
+  if (pitching[0]) {
+    console.log('[ERA] 欄位名稱:', Object.keys(pitching[0]));
   }
 
   // 依防禦率排序（取有投球局數的前 8 名，防禦率越低越好）
@@ -1760,12 +1767,20 @@ function renderKBBChart() {
  */
 function renderFieldingPctChart() {
   console.log('[Fielding] 開始渲染');
+  console.log('[Fielding] appState.data?.sheets:', Object.keys(appState.data?.sheets || {}));
+  console.log('[Fielding] fielding sheet:', appState.data?.sheets?.fielding);
+
   const fielding = appState.data?.sheets?.fielding?.data || [];
   console.log('[Fielding] fielding 資料筆數:', fielding.length);
 
   if (fielding.length === 0) {
     console.log('[Fielding] 無守備資料');
     return;
+  }
+
+  // 顯示第一筆資料的欄位名稱
+  if (fielding[0]) {
+    console.log('[Fielding] 欄位名稱:', Object.keys(fielding[0]));
   }
 
   // 依守備率排序（取前 8 名）
