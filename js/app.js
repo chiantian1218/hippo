@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.1.7 - 比較 extraBase bar 元素
+// 版本: 2.1.8 - 修復 bar chart NaN 問題 (移除 scale 限制)
 // ============================================================
 
 // API 基礎 URL
@@ -1333,12 +1333,8 @@ function destroyChart(chartName) {
  * 打擊率 vs 上壘率圖表
  */
 function renderBattingOBPChart() {
-  console.log('[OBP] 開始渲染');
   const batting = appState.data?.sheets?.batting?.data || [];
-  if (batting.length === 0) {
-    console.log('[OBP] 無資料');
-    return;
-  }
+  if (batting.length === 0) return;
 
   // 取前 8 名有打擊率的球員
   const sorted = [...batting]
@@ -1346,29 +1342,18 @@ function renderBattingOBPChart() {
     .sort((a, b) => getNumericField(b, '打擊率') - getNumericField(a, '打擊率'))
     .slice(0, 8);
 
-  if (sorted.length === 0) {
-    console.log('[OBP] 過濾後無資料');
-    return;
-  }
-
-  console.log('[OBP] 球員數:', sorted.length);
+  if (sorted.length === 0) return;
 
   const labels = sorted.map(b => getField(b, '姓名') || '未知');
   const avgData = sorted.map(b => getNumericField(b, '打擊率'));
   const obpData = sorted.map(b => getNumericField(b, '上壘率'));
 
-  console.log('[OBP] avgData:', avgData);
-
   destroyChart('battingOBP');
 
   const ctx = document.getElementById('chart-batting-obp');
-  if (!ctx) {
-    console.log('[OBP] 找不到 canvas');
-    return;
-  }
+  if (!ctx) return;
 
-  try {
-    Charts.battingOBP = new Chart(ctx, {
+  Charts.battingOBP = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: labels,
@@ -1406,42 +1391,12 @@ function renderBattingOBPChart() {
         },
         y: {
           beginAtZero: true,
-          suggestedMax: 1,
           ticks: { color: '#9ca3af' },
           grid: { color: 'rgba(55, 65, 81, 0.5)' }
         }
       }
     }
   });
-    console.log('[OBP] 圖表創建成功');
-
-    // 強制更新並檢查
-    setTimeout(() => {
-      const chart = Charts.battingOBP;
-
-      // 嘗試強制重新計算
-      chart.update('reset');
-
-      setTimeout(() => {
-        const meta = chart.getDatasetMeta(0);
-        const bar = meta.data[0];
-        console.log('[OBP] 更新後 Bar 0: height=' + bar.height + ' base=' + bar.base);
-
-        // 檢查 bar 元素的所有屬性
-        console.log('[OBP] Bar 元素完整屬性:', {
-          x: bar.x,
-          y: bar.y,
-          width: bar.width,
-          height: bar.height,
-          base: bar.base,
-          horizontal: bar.horizontal,
-          options: bar.options
-        });
-      }, 50);
-    }, 50);
-  } catch (err) {
-    console.error('[OBP] 創建失敗:', err);
-  }
 }
 
 /**
@@ -1539,13 +1494,6 @@ function renderExtraBaseChart() {
       }
     }
   });
-
-  // 診斷 extraBase
-  setTimeout(() => {
-    const meta = Charts.extraBase.getDatasetMeta(0);
-    const bar = meta.data[0];
-    console.log('[ExtraBase] Bar 0: height=' + bar.height + ' base=' + bar.base);
-  }, 50);
 }
 
 /**
@@ -1753,8 +1701,7 @@ function renderFieldingPctChart() {
       },
       scales: {
         x: {
-          min: 0.7,
-          max: 1,
+          beginAtZero: true,
           ticks: {
             color: '#9ca3af',
             callback: v => v.toFixed(2)
