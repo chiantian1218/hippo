@@ -1355,6 +1355,7 @@ function renderTeamStats() {
   const rawGames = appState.data?.sheets?.games?.data || [];
   const batting = appState.data?.sheets?.batting?.data || [];
   const pitching = appState.data?.sheets?.pitching?.data || [];
+  const fielding = appState.data?.sheets?.fielding?.data || [];
 
   // 過濾空白比賽紀錄（只保留有對手資料的紀錄）
   const games = rawGames.filter(g => g['對手'] && g['對手'].trim() !== '');
@@ -1407,12 +1408,75 @@ function renderTeamStats() {
   // 投手統計 - 團隊投手三振數
   const pitcherK = pitching.reduce((sum, p) => sum + (parseInt(p['三振']) || 0), 0);
 
-  // 最高打擊率球員
+  // 最高打擊率球員 (打擊王)
   const topHitter = batting.reduce((best, b) => {
     const avg = parseFloat(b['打擊率']) || 0;
     return avg > (best.avg || 0) ? { name: b['姓名'], avg } : best;
   }, {});
   const topHitterStr = topHitter.name ? `${topHitter.name} (${topHitter.avg.toFixed(3)})` : '---';
+
+  // 盜壘王
+  const topStealer = batting.reduce((best, b) => {
+    const sb = parseInt(b['盜壘']) || 0;
+    return sb > (best.sb || 0) ? { name: b['姓名'], sb } : best;
+  }, {});
+  const topStealerStr = topStealer.name && topStealer.sb > 0 ? `${topStealer.name} (${topStealer.sb})` : '---';
+
+  // 打點王
+  const topRBI = batting.reduce((best, b) => {
+    const rbi = parseInt(b['打點']) || 0;
+    return rbi > (best.rbi || 0) ? { name: b['姓名'], rbi } : best;
+  }, {});
+  const topRBIStr = topRBI.name && topRBI.rbi > 0 ? `${topRBI.name} (${topRBI.rbi})` : '---';
+
+  // 全壘打王
+  const topHRPlayer = batting.reduce((best, b) => {
+    const hr = parseInt(b['全壘打']) || 0;
+    return hr > (best.hr || 0) ? { name: b['姓名'], hr } : best;
+  }, {});
+  const topHRStr = topHRPlayer.name && topHRPlayer.hr > 0 ? `${topHRPlayer.name} (${topHRPlayer.hr})` : '---';
+
+  // 安打王
+  const topHits = batting.reduce((best, b) => {
+    const hits = parseInt(b['安打']) || 0;
+    return hits > (best.hits || 0) ? { name: b['姓名'], hits } : best;
+  }, {});
+  const topHitsStr = topHits.name && topHits.hits > 0 ? `${topHits.name} (${topHits.hits})` : '---';
+
+  // 得分王
+  const topRuns = batting.reduce((best, b) => {
+    const runs = parseInt(b['得分']) || 0;
+    return runs > (best.runs || 0) ? { name: b['姓名'], runs } : best;
+  }, {});
+  const topRunsStr = topRuns.name && topRuns.runs > 0 ? `${topRuns.name} (${topRuns.runs})` : '---';
+
+  // 三振王 (投手)
+  const topPitcherK = pitching.reduce((best, p) => {
+    const k = parseInt(p['三振']) || 0;
+    return k > (best.k || 0) ? { name: p['姓名'], k } : best;
+  }, {});
+  const topPitcherKStr = topPitcherK.name && topPitcherK.k > 0 ? `${topPitcherK.name} (${topPitcherK.k})` : '---';
+
+  // 勝投王
+  const topWinner = pitching.reduce((best, p) => {
+    const w = parseInt(p['勝']) || 0;
+    return w > (best.w || 0) ? { name: p['姓名'], w } : best;
+  }, {});
+  const topWinnerStr = topWinner.name && topWinner.w > 0 ? `${topWinner.name} (${topWinner.w}勝)` : '---';
+
+  // 選球王 (最多四壞球)
+  const topWalker = batting.reduce((best, b) => {
+    const bb = parseInt(b['四壞球']) || 0;
+    return bb > (best.bb || 0) ? { name: b['姓名'], bb } : best;
+  }, {});
+  const topWalkerStr = topWalker.name && topWalker.bb > 0 ? `${topWalker.name} (${topWalker.bb})` : '---';
+
+  // 防禦王 (最高守備率)
+  const topFielder = fielding.reduce((best, f) => {
+    const pct = parseFloat(f['守備率']) || 0;
+    return pct > (best.pct || 0) ? { name: f['姓名'], pct } : best;
+  }, {});
+  const topFielderStr = topFielder.name && topFielder.pct > 0 ? `${topFielder.name} (${topFielder.pct.toFixed(3)})` : '---';
 
   const stats = [
     // 第一行：比賽概況
@@ -1434,7 +1498,20 @@ function renderTeamStats() {
     { label: '四壞球', value: totalBB, icon: 'target', color: 'text-tech-blue' },
     { label: '被三振', value: totalK, icon: 'xCircle', color: 'text-danger' },
     { label: '投手三振', value: pitcherK, icon: 'target', color: 'text-success' },
-    { label: '打擊王', value: topHitterStr, icon: 'trophy', color: 'text-warning', isSmall: true }
+    { label: '場均失分', value: avgRunsAgainst, icon: 'shield', color: 'text-tech-purple' },
+    // 第五行：打擊王榜
+    { label: '打擊王', value: topHitterStr, icon: 'trophy', color: 'text-warning', isSmall: true },
+    { label: '安打王', value: topHitsStr, icon: 'baseball', color: 'text-tech-blue', isSmall: true },
+    { label: '打點王', value: topRBIStr, icon: 'trophy', color: 'text-success', isSmall: true },
+    { label: '全壘打王', value: topHRStr, icon: 'baseball', color: 'text-danger', isSmall: true },
+    // 第六行：速度與選球
+    { label: '得分王', value: topRunsStr, icon: 'trendingUp', color: 'text-success', isSmall: true },
+    { label: '盜壘王', value: topStealerStr, icon: 'refresh', color: 'text-tech-purple', isSmall: true },
+    { label: '選球王', value: topWalkerStr, icon: 'target', color: 'text-tech-blue', isSmall: true },
+    { label: '防禦王', value: topFielderStr, icon: 'shield', color: 'text-warning', isSmall: true },
+    // 第七行：投手王榜
+    { label: '三振王', value: topPitcherKStr, icon: 'target', color: 'text-danger', isSmall: true },
+    { label: '勝投王', value: topWinnerStr, icon: 'trophy', color: 'text-success', isSmall: true }
   ];
 
   const html = stats.map(stat => `
