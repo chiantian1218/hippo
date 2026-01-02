@@ -733,16 +733,17 @@ function initMobileNav() {
 
     if (isMobile) {
       mobileNav.classList.remove('hidden');
-      // 手機版預設只顯示第一個區塊
-      sections.forEach((section, index) => {
-        if (index === 0) {
+      // 手機版：保持當前區塊，如果是第一次載入則顯示第一個
+      const currentSection = sectionOrder[currentSectionIndex] || 'players';
+      sections.forEach(section => {
+        const name = section.getAttribute('data-mobile-section');
+        if (name === currentSection) {
           section.classList.remove('hidden');
         } else {
           section.classList.add('hidden');
         }
       });
-      currentSectionIndex = 0;
-      updateActiveTab(sectionOrder[0]);
+      updateActiveTab(currentSection);
     } else if (isTablet) {
       mobileNav.classList.add('hidden');
       // 平板版顯示所有區塊
