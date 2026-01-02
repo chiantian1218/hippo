@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.2.4 - 一壘打改用黃色 (原灰色太暗)
+// 版本: 2.2.5 - 長打分布 dataset 順序調整測試
 // ============================================================
 
 // API 基礎 URL
@@ -1509,31 +1509,31 @@ function renderExtraBaseChart() {
       labels: labels,
       datasets: [
         {
-          label: '一壘打',
-          data: singlesData,
-          backgroundColor: 'rgba(251, 191, 36, 0.8)',
-          borderColor: '#fbbf24',
-          borderWidth: 1
-        },
-        {
-          label: '二壘打',
-          data: doublesData,
-          backgroundColor: 'rgba(0, 212, 255, 0.7)',
-          borderColor: '#00d4ff',
+          label: '全壘打',
+          data: homersData,
+          backgroundColor: 'rgba(239, 68, 68, 0.8)',
+          borderColor: '#ef4444',
           borderWidth: 1
         },
         {
           label: '三壘打',
           data: triplesData,
-          backgroundColor: 'rgba(16, 185, 129, 0.7)',
+          backgroundColor: 'rgba(16, 185, 129, 0.8)',
           borderColor: '#10b981',
           borderWidth: 1
         },
         {
-          label: '全壘打',
-          data: homersData,
-          backgroundColor: 'rgba(239, 68, 68, 0.7)',
-          borderColor: '#ef4444',
+          label: '二壘打',
+          data: doublesData,
+          backgroundColor: 'rgba(0, 212, 255, 0.8)',
+          borderColor: '#00d4ff',
+          borderWidth: 1
+        },
+        {
+          label: '一壘打',
+          data: singlesData,
+          backgroundColor: 'rgba(251, 191, 36, 0.8)',
+          borderColor: '#fbbf24',
           borderWidth: 1
         }
       ]
