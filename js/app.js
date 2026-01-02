@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.1.5 - 改用 beginAtZero + suggestedMax
+// 版本: 2.1.6 - 強制 chart.update('reset')
 // ============================================================
 
 // API 基礎 URL
@@ -1415,29 +1415,29 @@ function renderBattingOBPChart() {
   });
     console.log('[OBP] 圖表創建成功');
 
-    // 檢查 scale 和 bar 元素
+    // 強制更新並檢查
     setTimeout(() => {
       const chart = Charts.battingOBP;
-      const meta = chart.getDatasetMeta(0);
-      const bar = meta.data[0];
 
-      console.log('[OBP] parsed:', bar.$context.parsed);
-      console.log('[OBP] parsed.x:', bar.$context.parsed.x);
-      console.log('[OBP] parsed.y:', bar.$context.parsed.y);
-      console.log('[OBP] parsed._custom:', bar.$context.parsed._custom);
+      // 嘗試強制重新計算
+      chart.update('reset');
 
-      // 檢查 vScale (Y scale) 的 base
-      const vScale = chart.scales.y;
-      console.log('[OBP] vScale.min:', vScale.min);
-      console.log('[OBP] vScale.max:', vScale.max);
-      console.log('[OBP] vScale._startPixel:', vScale._startPixel);
-      console.log('[OBP] vScale._endPixel:', vScale._endPixel);
+      setTimeout(() => {
+        const meta = chart.getDatasetMeta(0);
+        const bar = meta.data[0];
+        console.log('[OBP] 更新後 Bar 0: height=' + bar.height + ' base=' + bar.base);
 
-      // 嘗試手動計算 base
-      const basePixel = vScale.getPixelForValue(0);
-      console.log('[OBP] 手動計算 basePixel:', basePixel);
-
-      console.log('[OBP] Chart.js 版本:', Chart.version);
+        // 檢查 bar 元素的所有屬性
+        console.log('[OBP] Bar 元素完整屬性:', {
+          x: bar.x,
+          y: bar.y,
+          width: bar.width,
+          height: bar.height,
+          base: bar.base,
+          horizontal: bar.horizontal,
+          options: bar.options
+        });
+      }, 50);
     }, 50);
   } catch (err) {
     console.error('[OBP] 創建失敗:', err);
