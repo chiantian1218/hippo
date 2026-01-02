@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.1.1 - 修復 updateChartsTheme 遞迴錯誤
+// 版本: 2.1.2 - 診斷 bar 元素 + zoom plugin 狀態
 // ============================================================
 
 // API 基礎 URL
@@ -1414,6 +1414,17 @@ function renderBattingOBPChart() {
     }
   });
     console.log('[OBP] 圖表創建成功');
+
+    // 檢查 bar 元素
+    setTimeout(() => {
+      const meta = Charts.battingOBP.getDatasetMeta(0);
+      if (meta.data[0]) {
+        const bar = meta.data[0];
+        console.log('[OBP] Bar 0:', 'height=' + bar.height, 'base=' + bar.base, 'y=' + bar.y);
+      }
+      // 檢查是否有 zoom plugin
+      console.log('[OBP] Chart 有 resetZoom?', !!Charts.battingOBP.resetZoom);
+    }, 50);
   } catch (err) {
     console.error('[OBP] 創建失敗:', err);
   }
