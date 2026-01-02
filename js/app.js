@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.2.1 - 打擊率vs上壘率改用折線圖
+// 版本: 2.2.2 - 折線圖加入 crosshair 模式
 // ============================================================
 
 // API 基礎 URL
@@ -1402,6 +1402,10 @@ function renderBattingOBPChart() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
         plugins: {
           legend: {
             display: true,
@@ -1409,6 +1413,8 @@ function renderBattingOBPChart() {
             labels: { color: '#9ca3af' }
           },
           tooltip: {
+            mode: 'index',
+            intersect: false,
             callbacks: {
               label: function(context) {
                 return `${context.dataset.label}: ${context.raw.toFixed(3)}`;
@@ -1430,6 +1436,10 @@ function renderBattingOBPChart() {
             },
             grid: { color: 'rgba(55, 65, 81, 0.5)' }
           }
+        },
+        hover: {
+          mode: 'index',
+          intersect: false
         }
       }
     });
