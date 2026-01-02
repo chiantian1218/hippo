@@ -1051,6 +1051,21 @@ select:focus {
   color: var(--tech-blue) !important;
 }
 
+/* 淺色主題: 桌面版左側選單 */
+[data-theme="light"] .desktop-tab {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="light"] .desktop-tab:hover {
+  color: var(--tech-blue) !important;
+  background-color: var(--bg-tertiary) !important;
+}
+
+[data-theme="light"] .desktop-tab.active {
+  color: var(--tech-blue) !important;
+  background-color: var(--bg-tertiary) !important;
+}
+
 /* 淺色主題: 捲動條 */
 [data-theme="light"] ::-webkit-scrollbar-track {
   background: var(--bg-tertiary) !important;
