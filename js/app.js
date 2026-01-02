@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.6.1 - 修復圖表 crosshair 垂直虛線顯示問題，優化對手戰績圖表資料處理
+// 版本: 2.6.2 - 對手戰績圖表除錯版本
 // ============================================================
 
 // API 基礎 URL
@@ -3749,10 +3749,23 @@ function renderTeamOffenseChart() {
 function renderOpponentChart() {
   const rawGames = appState.data?.sheets?.games?.data || [];
   const ctx = document.getElementById('chart-opponent');
-  if (!ctx) return;
+
+  // 除錯日誌
+  console.log('[DEBUG] renderOpponentChart - rawGames:', rawGames);
+  console.log('[DEBUG] renderOpponentChart - rawGames.length:', rawGames.length);
+  if (rawGames.length > 0) {
+    console.log('[DEBUG] renderOpponentChart - 第一筆資料 keys:', Object.keys(rawGames[0]));
+    console.log('[DEBUG] renderOpponentChart - 第一筆資料:', rawGames[0]);
+  }
+
+  if (!ctx) {
+    console.log('[DEBUG] renderOpponentChart - canvas 不存在!');
+    return;
+  }
 
   // 過濾有效比賽資料 (與 renderGameScoresChart 一致)
   const validGames = rawGames.filter(g => g['對手'] && g['對手'].trim() !== '');
+  console.log('[DEBUG] renderOpponentChart - validGames.length:', validGames.length);
 
   // 依對手分組統計
   const opponentStats = {};
