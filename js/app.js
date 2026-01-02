@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.0.3 - 診斷打擊率圖表 (canvas + chart creation)
+// 版本: 2.0.4 - 診斷 bar 元素數值
 // ============================================================
 
 // API 基礎 URL
@@ -1462,6 +1462,24 @@ function renderBattingOBPChart() {
     }
   });
     console.log('[打擊率圖表] Chart 創建成功:', Charts.battingOBP);
+
+    // 診斷：檢查 bar 元素的實際數值
+    setTimeout(() => {
+      const chart = Charts.battingOBP;
+      if (chart) {
+        const meta0 = chart.getDatasetMeta(0);
+        const meta1 = chart.getDatasetMeta(1);
+        console.log('[打擊率圖表] Dataset 0 (打擊率) bars:');
+        meta0.data.forEach((bar, i) => {
+          console.log(`  Bar ${i}: x=${bar.x}, y=${bar.y}, width=${bar.width}, height=${bar.height}, base=${bar.base}`);
+        });
+        console.log('[打擊率圖表] Dataset 1 (上壘率) bars:');
+        meta1.data.forEach((bar, i) => {
+          console.log(`  Bar ${i}: x=${bar.x}, y=${bar.y}, width=${bar.width}, height=${bar.height}, base=${bar.base}`);
+        });
+        console.log('[打擊率圖表] Y 軸範圍:', chart.scales.y.min, '-', chart.scales.y.max);
+      }
+    }, 100);
   } catch (error) {
     console.error('[打擊率圖表] Chart 創建失敗:', error);
   }
