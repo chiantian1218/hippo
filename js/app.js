@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.0.0 - 專業深色科技風格 + 多圖表 + Mobile-first RWD
+// 版本: 2.0.1 - 修復圖表 bar height NaN 問題 (移除全域 zoom plugin 註冊)
 // ============================================================
 
 // API 基礎 URL
@@ -578,51 +578,19 @@ function initChartDefaults() {
     color: 'rgba(55, 65, 81, 0.5)'
   };
 
-  // 註冊 zoom plugin (如果可用)
-  if (window.Chart && window.ChartZoom) {
-    Chart.register(window.ChartZoom);
-  }
+  // 注意：不再全域註冊 zoom plugin，因為會干擾 bar chart 的 scale 計算
+  // 如需縮放功能，在個別圖表中使用 plugins: [ChartZoom] 方式載入
 }
 
 /**
  * 取得圖表縮放設定 (用於手機版 pinch-to-zoom)
+ * 注意：目前暫時停用 zoom 功能，因為 chartjs-plugin-zoom 全域註冊會干擾 bar chart 渲染
  * @param {boolean} enableZoom - 是否啟用縮放
- * @returns {object} zoom plugin 配置
+ * @returns {object} zoom plugin 配置 (目前返回空物件)
  */
 function getChartZoomConfig(enableZoom = true) {
-  if (!enableZoom) return {};
-
-  return {
-    zoom: {
-      zoom: {
-        wheel: {
-          enabled: false  // 桌面版禁用滾輪縮放
-        },
-        pinch: {
-          enabled: true   // 手機版啟用雙指縮放
-        },
-        mode: 'xy',
-        onZoomComplete: function({ chart }) {
-          // 縮放後顯示重置按鈕提示
-          chart.options.plugins.title = chart.options.plugins.title || {};
-          chart.options.plugins.title.display = true;
-          chart.options.plugins.title.text = '雙擊重置縮放';
-          chart.options.plugins.title.color = '#9ca3af';
-          chart.options.plugins.title.font = { size: 10 };
-          chart.update('none');
-        }
-      },
-      pan: {
-        enabled: true,
-        mode: 'xy',
-        threshold: 10
-      },
-      limits: {
-        x: { min: 'original', max: 'original' },
-        y: { min: 'original', max: 'original' }
-      }
-    }
-  };
+  // 暫時停用：zoom plugin 全域註冊會導致 bar chart 的 height/base 變成 NaN
+  return {};
 }
 
 /**
@@ -1396,18 +1364,7 @@ function destroyChart(chartName) {
  */
 function renderBattingOBPChart() {
   const batting = appState.data?.sheets?.batting?.data || [];
-
-  // 調試：顯示原始資料結構
-  if (batting.length > 0) {
-    console.log('打擊資料欄位:', Object.keys(batting[0]));
-    console.log('第一筆打擊資料:', batting[0]);
-    // 測試 getNumericField
-    const testValue = getNumericField(batting[0], '打擊率');
-    console.log('getNumericField 測試 - 打擊率:', testValue, typeof testValue);
-  } else {
-    console.warn('renderBattingOBPChart: 無打擊資料');
-    return;
-  }
+  if (batting.length === 0) return;
 
   // 取前 8 名有打擊率的球員 (使用安全取值函數)
   const sorted = [...batting]
@@ -1415,142 +1372,62 @@ function renderBattingOBPChart() {
     .sort((a, b) => getNumericField(b, '打擊率') - getNumericField(a, '打擊率'))
     .slice(0, 8);
 
-  // 若沒有資料則不渲染
-  if (sorted.length === 0) {
-    console.warn('renderBattingOBPChart: 無有效打擊率資料，檢查欄位名稱是否正確');
-    // 嘗試顯示可能的欄位名稱
-    if (batting.length > 0) {
-      const keys = Object.keys(batting[0]);
-      const avgLike = keys.filter(k => k.includes('打擊') || k.includes('AVG') || k.includes('avg'));
-      console.log('可能的打擊率欄位:', avgLike);
-    }
-    return;
-  }
+  if (sorted.length === 0) return;
 
   const labels = sorted.map(b => getField(b, '姓名') || '未知');
   const avgData = sorted.map(b => getNumericField(b, '打擊率'));
   const obpData = sorted.map(b => getNumericField(b, '上壘率'));
 
-  // 調試：顯示圖表數據
-  console.log('打擊率圖表 - 篩選後球員數:', sorted.length);
-  console.log('打擊率圖表 - labels:', labels);
-  console.log('打擊率圖表 - avgData:', avgData);
-  console.log('打擊率圖表 - obpData:', obpData);
-
   destroyChart('battingOBP');
 
   const ctx = document.getElementById('chart-batting-obp');
-  if (!ctx) {
-    console.warn('renderBattingOBPChart: 找不到 canvas 元素 #chart-batting-obp');
-    return;
-  }
+  if (!ctx) return;
 
-  // 調試：檢查 Chart.js 註冊狀態
-  console.log('=== Chart.js 調試 ===');
-  console.log('Chart.js 版本:', Chart.version);
-  console.log('已註冊控制器:', Object.keys(Chart.registry?.controllers || {}));
-  console.log('已註冊元素:', Object.keys(Chart.registry?.elements || {}));
-  console.log('已註冊縮放:', Object.keys(Chart.registry?.scales || {}));
-
-  // 確保 Bar 相關組件已註冊
-  if (Chart.registry) {
-    console.log('BarController:', Chart.registry.controllers.bar ? '已註冊' : '未註冊');
-    console.log('BarElement:', Chart.registry.elements.bar ? '已註冊' : '未註冊');
-  }
-
-  try {
-    Charts.battingOBP = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            label: '打擊率 AVG',
-            data: avgData,
-            backgroundColor: 'rgba(88, 166, 255, 0.8)',
-            borderColor: 'rgba(88, 166, 255, 1)',
-            borderWidth: 1,
-            barPercentage: 0.8,
-            categoryPercentage: 0.9
-          },
-          {
-            label: '上壘率 OBP',
-            data: obpData,
-            backgroundColor: 'rgba(139, 92, 246, 0.8)',
-            borderColor: 'rgba(139, 92, 246, 1)',
-            borderWidth: 1,
-            barPercentage: 0.8,
-            categoryPercentage: 0.9
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: true,
-            position: 'top',
-            labels: { color: '#9ca3af' }
-          }
+  Charts.battingOBP = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: '打擊率 AVG',
+          data: avgData,
+          backgroundColor: 'rgba(88, 166, 255, 0.8)',
+          borderColor: 'rgba(88, 166, 255, 1)',
+          borderWidth: 1
         },
-        scales: {
-          x: {
-            type: 'category',
-            ticks: { color: '#9ca3af' },
-            grid: { color: 'rgba(55, 65, 81, 0.5)' }
-          },
-          y: {
-            type: 'linear',
-            min: 0,
-            max: 1,
-            ticks: {
-              color: '#9ca3af',
-              callback: function(value) {
-                return value.toFixed(2);
-              }
-            },
-            grid: { color: 'rgba(55, 65, 81, 0.5)' }
-          }
+        {
+          label: '上壘率 OBP',
+          data: obpData,
+          backgroundColor: 'rgba(139, 92, 246, 0.8)',
+          borderColor: 'rgba(139, 92, 246, 1)',
+          borderWidth: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: { color: '#9ca3af' }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#9ca3af' },
+          grid: { color: 'rgba(55, 65, 81, 0.5)' }
+        },
+        y: {
+          min: 0,
+          max: 1,
+          ticks: { color: '#9ca3af' },
+          grid: { color: 'rgba(55, 65, 81, 0.5)' }
         }
       }
-    });
-
-    console.log('打擊率圖表創建成功');
-
-    // 調試：檢查數據集
-    const datasets = Charts.battingOBP.data.datasets;
-    console.log('數據集數量:', datasets.length);
-    datasets.forEach((ds, i) => {
-      console.log(`數據集 ${i}:`, ds.label, ds.data, 'hidden:', ds.hidden);
-    });
-
-    // 強制更新和渲染
-    Charts.battingOBP.update('none');
-    Charts.battingOBP.render();
-
-    // 檢查渲染後的狀態
-    const meta = Charts.battingOBP.getDatasetMeta(0);
-    if (meta.data.length > 0) {
-      const bar = meta.data[0];
-      console.log('Bar 元素詳情:');
-      console.log('  x:', bar.x, 'y:', bar.y);
-      console.log('  width:', bar.width, 'height:', bar.height);
-      console.log('  base:', bar.base);
-      console.log('  全部屬性:', bar);
     }
-
-    // 檢查 Y 軸
-    const yScale = Charts.battingOBP.scales.y;
-    console.log('Y 軸:', yScale);
-    console.log('Y 軸 min:', yScale.min, 'max:', yScale.max);
-
-  } catch (error) {
-    console.error('Chart 創建錯誤:', error);
-  }
-
-  // 雙擊重置縮放
-  ctx.ondblclick = () => resetChartZoom(Charts.battingOBP);
+  });
 }
 
 /**
@@ -1659,15 +1536,7 @@ function renderExtraBaseChart() {
  */
 function renderERAChart() {
   const pitching = appState.data?.sheets?.pitching?.data || [];
-
-  // 調試：顯示原始資料結構
-  if (pitching.length > 0) {
-    console.log('投手資料欄位:', Object.keys(pitching[0]));
-    console.log('第一筆投手資料:', pitching[0]);
-  } else {
-    console.warn('renderERAChart: 無投手資料');
-    return;
-  }
+  if (pitching.length === 0) return;
 
   // 依防禦率排序（取有投球局數的前 8 名，防禦率越低越好）
   const sorted = [...pitching]
@@ -1675,32 +1544,15 @@ function renderERAChart() {
     .sort((a, b) => getNumericField(a, '防禦率') - getNumericField(b, '防禦率'))
     .slice(0, 8);
 
-  // 若沒有資料則不渲染
-  if (sorted.length === 0) {
-    console.warn('renderERAChart: 無有效投手資料，檢查欄位名稱');
-    if (pitching.length > 0) {
-      const keys = Object.keys(pitching[0]);
-      const ipLike = keys.filter(k => k.includes('投球') || k.includes('局數') || k.includes('IP'));
-      console.log('可能的投球局數欄位:', ipLike);
-    }
-    return;
-  }
+  if (sorted.length === 0) return;
 
   const labels = sorted.map(p => getField(p, '姓名') || '未知');
   const eraData = sorted.map(p => getNumericField(p, '防禦率'));
 
-  // 調試：顯示圖表數據
-  console.log('防禦率圖表 - 篩選後投手數:', sorted.length);
-  console.log('防禦率圖表 - labels:', labels);
-  console.log('防禦率圖表 - eraData:', eraData);
-
   destroyChart('era');
 
   const ctx = document.getElementById('chart-era');
-  if (!ctx) {
-    console.warn('renderERAChart: 找不到 canvas 元素 #chart-era');
-    return;
-  }
+  if (!ctx) return;
 
   Charts.era = new Chart(ctx, {
     type: 'bar',
@@ -1836,15 +1688,7 @@ function renderKBBChart() {
  */
 function renderFieldingPctChart() {
   const fielding = appState.data?.sheets?.fielding?.data || [];
-
-  // 調試：顯示原始資料結構
-  if (fielding.length > 0) {
-    console.log('守備資料欄位:', Object.keys(fielding[0]));
-    console.log('第一筆守備資料:', fielding[0]);
-  } else {
-    console.warn('renderFieldingPctChart: 無守備資料');
-    return;
-  }
+  if (fielding.length === 0) return;
 
   // 依守備率排序（取前 8 名）
   const sorted = [...fielding]
@@ -1852,16 +1696,7 @@ function renderFieldingPctChart() {
     .sort((a, b) => getNumericField(b, '守備率') - getNumericField(a, '守備率'))
     .slice(0, 8);
 
-  // 若沒有資料則不渲染
-  if (sorted.length === 0) {
-    console.warn('renderFieldingPctChart: 無有效守備資料，檢查欄位名稱');
-    if (fielding.length > 0) {
-      const keys = Object.keys(fielding[0]);
-      const fldLike = keys.filter(k => k.includes('守備') || k.includes('率') || k.includes('FLD'));
-      console.log('可能的守備率欄位:', fldLike);
-    }
-    return;
-  }
+  if (sorted.length === 0) return;
 
   const labels = sorted.map(f => `${getField(f, '姓名') || '未知'} (${getField(f, '守位') || '-'})`);
   const pctData = sorted.map(f => getNumericField(f, '守備率'));
