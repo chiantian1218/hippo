@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.0.4 - 診斷 bar 元素數值
+// 版本: 2.1.0 - 修復 bar chart (移除 chartjs-plugin-zoom)
 // ============================================================
 
 // API 基礎 URL
@@ -1364,59 +1364,26 @@ function destroyChart(chartName) {
  */
 function renderBattingOBPChart() {
   const batting = appState.data?.sheets?.batting?.data || [];
-  if (batting.length === 0) {
-    console.warn('[打擊率圖表] 無打擊資料');
-    return;
-  }
+  if (batting.length === 0) return;
 
-  // 診斷：顯示第一筆資料的欄位和打擊率值
-  console.log('[打擊率圖表] 資料筆數:', batting.length);
-  console.log('[打擊率圖表] 欄位名稱:', Object.keys(batting[0]));
-  console.log('[打擊率圖表] 第一筆原始資料:', batting[0]);
-
-  // 診斷：測試前 3 筆的打擊率取值
-  batting.slice(0, 3).forEach((b, i) => {
-    const rawValue = getField(b, '打擊率');
-    const numValue = getNumericField(b, '打擊率');
-    console.log(`[打擊率圖表] 球員${i+1}: 原始值="${rawValue}", 數值=${numValue}`);
-  });
-
-  // 取前 8 名有打擊率的球員 (使用安全取值函數)
+  // 取前 8 名有打擊率的球員
   const sorted = [...batting]
     .filter(b => getNumericField(b, '打擊率') > 0)
     .sort((a, b) => getNumericField(b, '打擊率') - getNumericField(a, '打擊率'))
     .slice(0, 8);
 
-  console.log('[打擊率圖表] 過濾後球員數:', sorted.length);
-
-  if (sorted.length === 0) {
-    console.warn('[打擊率圖表] 過濾後無資料，可能欄位名稱不匹配或所有打擊率為0');
-    return;
-  }
+  if (sorted.length === 0) return;
 
   const labels = sorted.map(b => getField(b, '姓名') || '未知');
   const avgData = sorted.map(b => getNumericField(b, '打擊率'));
   const obpData = sorted.map(b => getNumericField(b, '上壘率'));
 
-  console.log('[打擊率圖表] labels:', labels);
-  console.log('[打擊率圖表] avgData:', avgData);
-  console.log('[打擊率圖表] obpData:', obpData);
-
   destroyChart('battingOBP');
 
   const ctx = document.getElementById('chart-batting-obp');
-  console.log('[打擊率圖表] canvas 元素:', ctx);
+  if (!ctx) return;
 
-  if (!ctx) {
-    console.error('[打擊率圖表] 找不到 canvas #chart-batting-obp');
-    return;
-  }
-
-  console.log('[打擊率圖表] canvas 尺寸:', ctx.offsetWidth, 'x', ctx.offsetHeight);
-  console.log('[打擊率圖表] 父容器:', ctx.parentElement, ctx.parentElement?.offsetWidth, 'x', ctx.parentElement?.offsetHeight);
-
-  try {
-    Charts.battingOBP = new Chart(ctx, {
+  Charts.battingOBP = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: labels,
@@ -1461,28 +1428,6 @@ function renderBattingOBPChart() {
       }
     }
   });
-    console.log('[打擊率圖表] Chart 創建成功:', Charts.battingOBP);
-
-    // 診斷：檢查 bar 元素的實際數值
-    setTimeout(() => {
-      const chart = Charts.battingOBP;
-      if (chart) {
-        const meta0 = chart.getDatasetMeta(0);
-        const meta1 = chart.getDatasetMeta(1);
-        console.log('[打擊率圖表] Dataset 0 (打擊率) bars:');
-        meta0.data.forEach((bar, i) => {
-          console.log(`  Bar ${i}: x=${bar.x}, y=${bar.y}, width=${bar.width}, height=${bar.height}, base=${bar.base}`);
-        });
-        console.log('[打擊率圖表] Dataset 1 (上壘率) bars:');
-        meta1.data.forEach((bar, i) => {
-          console.log(`  Bar ${i}: x=${bar.x}, y=${bar.y}, width=${bar.width}, height=${bar.height}, base=${bar.base}`);
-        });
-        console.log('[打擊率圖表] Y 軸範圍:', chart.scales.y.min, '-', chart.scales.y.max);
-      }
-    }, 100);
-  } catch (error) {
-    console.error('[打擊率圖表] Chart 創建失敗:', error);
-  }
 }
 
 /**
