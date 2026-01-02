@@ -1,7 +1,7 @@
 /* ============================================================
    泰山河馬棒球分析系統 - 自訂樣式
-   版本: 2.0.0
-   更新: 專業深色科技風格 + 多圖表 + Mobile-first RWD
+   版本: 2.4.0
+   更新: 桌面版左側 Tab 導航
    ============================================================ */
 
 /* ===== CSS 變數定義 ===== */
@@ -564,6 +564,72 @@ select:focus {
 
 .mobile-tab.active .icon {
   filter: drop-shadow(0 0 4px rgba(0, 212, 255, 0.5));
+}
+
+/* ===== 桌面版左側 Tab 導航 ===== */
+.sidebar-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-icon .icon {
+  width: 100%;
+  height: 100%;
+}
+
+.desktop-tab {
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.desktop-tab:hover {
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+}
+
+.desktop-tab.active {
+  color: var(--tech-blue);
+  background: var(--bg-tertiary);
+  border-left-color: var(--tech-blue);
+}
+
+.desktop-tab.active .sidebar-icon {
+  filter: drop-shadow(0 0 4px rgba(88, 166, 255, 0.5));
+}
+
+/* 桌面版區塊切換 - 使用 hidden class 控制 */
+.desktop-section.hidden {
+  display: none;
+}
+
+/* 桌面版時隱藏手機底部導航 */
+@media (min-width: 1024px) {
+  #mobile-tab-nav {
+    display: none !important;
+  }
+}
+
+/* 平板版時 (640px - 1023px) 顯示所有區塊 */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .desktop-section {
+    display: block !important;
+    margin-bottom: 1.5rem;
+  }
+
+  .desktop-section.hidden {
+    display: block !important;
+  }
+}
+
+/* 手機版時隱藏左側導航 */
+@media (max-width: 1023px) {
+  #desktop-sidebar {
+    display: none !important;
+  }
 }
 
 /* iOS Safe Area 支援 */
