@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.2.8 - 增強 ERA/守備率 debug log
+// 版本: 2.3.0 - 無資料時顯示提示訊息
 // ============================================================
 
 // API 基礎 URL
@@ -1583,21 +1583,7 @@ function renderExtraBaseChart() {
  * 防禦率排行圖表
  */
 function renderERAChart() {
-  console.log('[ERA] 開始渲染');
-  console.log('[ERA] pitching sheet:', appState.data?.sheets?.pitching);
-
   const pitching = appState.data?.sheets?.pitching?.data || [];
-  console.log('[ERA] pitching 資料筆數:', pitching.length);
-
-  if (pitching.length === 0) {
-    console.log('[ERA] 無投手資料');
-    return;
-  }
-
-  // 顯示第一筆資料的欄位名稱
-  if (pitching[0]) {
-    console.log('[ERA] 欄位名稱:', Object.keys(pitching[0]));
-  }
 
   // 依防禦率排序（取有投球局數的前 8 名，防禦率越低越好）
   const sorted = [...pitching]
@@ -1605,26 +1591,23 @@ function renderERAChart() {
     .sort((a, b) => getNumericField(a, '防禦率') - getNumericField(b, '防禦率'))
     .slice(0, 8);
 
-  console.log('[ERA] 過濾後筆數:', sorted.length);
-
+  // 無資料時顯示提示
   if (sorted.length === 0) {
-    console.log('[ERA] 過濾後無資料');
+    const ctx = document.getElementById('chart-era');
+    if (ctx) {
+      const container = ctx.parentElement;
+      container.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無投手資料</div>';
+    }
     return;
   }
 
   const labels = sorted.map(p => getField(p, '姓名') || '未知');
   const eraData = sorted.map(p => getNumericField(p, '防禦率'));
 
-  console.log('[ERA] labels:', labels);
-  console.log('[ERA] eraData:', eraData);
-
   destroyChart('era');
 
   const ctx = document.getElementById('chart-era');
-  if (!ctx) {
-    console.log('[ERA] 找不到 canvas #chart-era');
-    return;
-  }
+  if (!ctx) return;
 
   // 改用折線圖避免 Chart.js bar chart bug
   Charts.era = new Chart(ctx, {
@@ -1676,7 +1659,6 @@ function renderERAChart() {
       }
     }
   });
-  console.log('[ERA] 圖表創建成功');
 }
 
 /**
@@ -1766,22 +1748,7 @@ function renderKBBChart() {
  * 守備率排行圖表
  */
 function renderFieldingPctChart() {
-  console.log('[Fielding] 開始渲染');
-  console.log('[Fielding] appState.data?.sheets:', Object.keys(appState.data?.sheets || {}));
-  console.log('[Fielding] fielding sheet:', appState.data?.sheets?.fielding);
-
   const fielding = appState.data?.sheets?.fielding?.data || [];
-  console.log('[Fielding] fielding 資料筆數:', fielding.length);
-
-  if (fielding.length === 0) {
-    console.log('[Fielding] 無守備資料');
-    return;
-  }
-
-  // 顯示第一筆資料的欄位名稱
-  if (fielding[0]) {
-    console.log('[Fielding] 欄位名稱:', Object.keys(fielding[0]));
-  }
 
   // 依守備率排序（取前 8 名）
   const sorted = [...fielding]
@@ -1789,18 +1756,18 @@ function renderFieldingPctChart() {
     .sort((a, b) => getNumericField(b, '守備率') - getNumericField(a, '守備率'))
     .slice(0, 8);
 
-  console.log('[Fielding] 過濾後筆數:', sorted.length);
-
+  // 無資料時顯示提示
   if (sorted.length === 0) {
-    console.log('[Fielding] 過濾後無資料');
+    const ctx = document.getElementById('chart-fielding-pct');
+    if (ctx) {
+      const container = ctx.parentElement;
+      container.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無守備資料</div>';
+    }
     return;
   }
 
   const labels = sorted.map(f => getField(f, '姓名') || '未知');
   const pctData = sorted.map(f => getNumericField(f, '守備率'));
-
-  console.log('[Fielding] labels:', labels);
-  console.log('[Fielding] pctData:', pctData);
 
   destroyChart('fieldingPct');
 
