@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.0.2 - 診斷打擊率圖表問題
+// 版本: 2.0.3 - 診斷打擊率圖表 (canvas + chart creation)
 // ============================================================
 
 // API 基礎 URL
@@ -1398,12 +1398,25 @@ function renderBattingOBPChart() {
   const avgData = sorted.map(b => getNumericField(b, '打擊率'));
   const obpData = sorted.map(b => getNumericField(b, '上壘率'));
 
+  console.log('[打擊率圖表] labels:', labels);
+  console.log('[打擊率圖表] avgData:', avgData);
+  console.log('[打擊率圖表] obpData:', obpData);
+
   destroyChart('battingOBP');
 
   const ctx = document.getElementById('chart-batting-obp');
-  if (!ctx) return;
+  console.log('[打擊率圖表] canvas 元素:', ctx);
 
-  Charts.battingOBP = new Chart(ctx, {
+  if (!ctx) {
+    console.error('[打擊率圖表] 找不到 canvas #chart-batting-obp');
+    return;
+  }
+
+  console.log('[打擊率圖表] canvas 尺寸:', ctx.offsetWidth, 'x', ctx.offsetHeight);
+  console.log('[打擊率圖表] 父容器:', ctx.parentElement, ctx.parentElement?.offsetWidth, 'x', ctx.parentElement?.offsetHeight);
+
+  try {
+    Charts.battingOBP = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: labels,
@@ -1448,6 +1461,10 @@ function renderBattingOBPChart() {
       }
     }
   });
+    console.log('[打擊率圖表] Chart 創建成功:', Charts.battingOBP);
+  } catch (error) {
+    console.error('[打擊率圖表] Chart 創建失敗:', error);
+  }
 }
 
 /**
