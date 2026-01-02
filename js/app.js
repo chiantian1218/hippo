@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.1.6 - 強制 chart.update('reset')
+// 版本: 2.1.7 - 比較 extraBase bar 元素
 // ============================================================
 
 // API 基礎 URL
@@ -1522,8 +1522,7 @@ function renderExtraBaseChart() {
         legend: {
           position: 'top',
           labels: { color: '#9ca3af' }
-        },
-        ...getChartZoomConfig()
+        }
       },
       scales: {
         x: {
@@ -1541,8 +1540,12 @@ function renderExtraBaseChart() {
     }
   });
 
-  // 雙擊重置縮放
-  ctx.ondblclick = () => resetChartZoom(Charts.extraBase);
+  // 診斷 extraBase
+  setTimeout(() => {
+    const meta = Charts.extraBase.getDatasetMeta(0);
+    const bar = meta.data[0];
+    console.log('[ExtraBase] Bar 0: height=' + bar.height + ' base=' + bar.base);
+  }, 50);
 }
 
 /**
