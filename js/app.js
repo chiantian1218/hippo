@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.5.2 - 熱血火球登入 Logo、修復空白圖表
+// 版本: 2.6.0 - 新增 15 個專業分析圖表 (OPS, SLG, ISO, WHIP, K/9 等)
 // ============================================================
 
 // API 基礎 URL
@@ -341,14 +341,41 @@ const MAX_CONVERSATION_TURNS = 100;
 // 圖表實例管理
 // ============================================================
 const Charts = {
+  // 打擊分析
   battingOBP: null,
   extraBase: null,
+  runsRbi: null,
+  bbK: null,
+  ops: null,
+  slg: null,
+  iso: null,
+  paResult: null,
+  kPct: null,
+  bbPct: null,
+  // 投手分析
   era: null,
   kbb: null,
+  innings: null,
+  pitcherRecord: null,
+  whip: null,
+  k9: null,
+  bb9: null,
+  kbbRatio: null,
+  // 守備分析
   fieldingPct: null,
   errors: null,
+  putoutsAssists: null,
+  defenseValue: null,
+  posFielding: null,
+  rangeFactor: null,
+  // 綜合分析
   radar: null,
-  winLoss: null
+  winLoss: null,
+  gameScores: null,
+  teamOffense: null,
+  opponent: null,
+  runsEff: null,
+  rbiEff: null
 };
 
 // 垂直虛線 Crosshair Plugin
@@ -1529,29 +1556,44 @@ function renderTeamStats() {
  * 渲染所有圖表
  */
 function renderAllCharts() {
-  // 打擊分析圖表
+  // 打擊分析圖表 (10 個)
   renderBattingOBPChart();
   renderExtraBaseChart();
   renderRunsRbiChart();
   renderBbKChart();
+  renderOPSChart();
+  renderSLGChart();
+  renderISOChart();
+  renderPAResultChart();
+  renderKPctChart();
+  renderBBPctChart();
 
-  // 投手分析圖表
+  // 投手分析圖表 (8 個)
   renderERAChart();
   renderKBBChart();
   renderInningsChart();
   renderPitcherRecordChart();
+  renderWHIPChart();
+  renderK9Chart();
+  renderBB9Chart();
+  renderKBBRatioChart();
 
-  // 守備分析圖表
+  // 守備分析圖表 (6 個)
   renderFieldingPctChart();
   renderErrorsChart();
   renderPutoutsAssistsChart();
   renderDefenseValueChart();
+  renderPosFieldingChart();
+  renderRangeFactorChart();
 
-  // 綜合分析圖表
+  // 綜合分析圖表 (7 個)
   renderRadarChart(0);  // 預設第一位球員
   renderWinLossChart();
   renderGameScoresChart();
   renderTeamOffenseChart();
+  renderOpponentChart();
+  renderRunsEffChart();
+  renderRbiEffChart();
 }
 
 /**
@@ -2482,6 +2524,415 @@ function renderBbKChart() {
 }
 
 /**
+ * OPS 排行圖表 (上壘率 + 長打率)
+ */
+function renderOPSChart() {
+  const batting = appState.data?.sheets?.batting?.data || [];
+  const ctx = document.getElementById('chart-ops');
+  if (!ctx) return;
+
+  // 計算 OPS = OBP + SLG
+  const players = batting
+    .filter(b => b['姓名'] && getNumericField(b, '打數') > 0)
+    .map(b => {
+      const ab = getIntField(b, '打數');
+      const hits = getIntField(b, '安打');
+      const doubles = getIntField(b, '二壘打');
+      const triples = getIntField(b, '三壘打');
+      const hr = getIntField(b, '全壘打');
+      const obp = getNumericField(b, '上壘率') || 0;
+      // SLG = (1B + 2*2B + 3*3B + 4*HR) / AB
+      const singles = Math.max(0, hits - doubles - triples - hr);
+      const slg = ab > 0 ? (singles + 2 * doubles + 3 * triples + 4 * hr) / ab : 0;
+      const ops = obp + slg;
+      return { name: b['姓名'], ops: ops, obp: obp, slg: slg };
+    })
+    .filter(p => p.ops > 0)
+    .sort((a, b) => b.ops - a.ops)
+    .slice(0, 10);
+
+  destroyChart('ops');
+
+  if (players.length === 0) {
+    ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無 OPS 資料</div>';
+    return;
+  }
+
+  Charts.ops = new Chart(ctx, {
+    type: 'line',
+    plugins: [crosshairPlugin],
+    data: {
+      labels: players.map(p => p.name),
+      datasets: [{
+        label: 'OPS',
+        data: players.map(p => parseFloat(p.ops.toFixed(3))),
+        borderColor: '#f59e0b',
+        backgroundColor: 'rgba(245, 158, 11, 0.2)',
+        borderWidth: 3,
+        pointRadius: 6,
+        pointBackgroundColor: players.map(p => p.ops >= 0.800 ? '#10b981' : p.ops >= 0.700 ? '#f59e0b' : '#ef4444'),
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const p = players[ctx.dataIndex];
+              return `OPS: ${p.ops.toFixed(3)} (OBP: ${p.obp.toFixed(3)} + SLG: ${p.slg.toFixed(3)})`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } },
+        y: { beginAtZero: true, ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } }
+      }
+    }
+  });
+}
+
+/**
+ * 長打率 (SLG) 排行圖表
+ */
+function renderSLGChart() {
+  const batting = appState.data?.sheets?.batting?.data || [];
+  const ctx = document.getElementById('chart-slg');
+  if (!ctx) return;
+
+  const players = batting
+    .filter(b => b['姓名'] && getNumericField(b, '打數') > 0)
+    .map(b => {
+      const ab = getIntField(b, '打數');
+      const hits = getIntField(b, '安打');
+      const doubles = getIntField(b, '二壘打');
+      const triples = getIntField(b, '三壘打');
+      const hr = getIntField(b, '全壘打');
+      const singles = Math.max(0, hits - doubles - triples - hr);
+      const slg = ab > 0 ? (singles + 2 * doubles + 3 * triples + 4 * hr) / ab : 0;
+      return { name: b['姓名'], slg: slg };
+    })
+    .filter(p => p.slg > 0)
+    .sort((a, b) => b.slg - a.slg)
+    .slice(0, 10);
+
+  destroyChart('slg');
+
+  if (players.length === 0) {
+    ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無長打率資料</div>';
+    return;
+  }
+
+  Charts.slg = new Chart(ctx, {
+    type: 'line',
+    plugins: [crosshairPlugin],
+    data: {
+      labels: players.map(p => p.name),
+      datasets: [{
+        label: '長打率 SLG',
+        data: players.map(p => parseFloat(p.slg.toFixed(3))),
+        borderColor: '#8b5cf6',
+        backgroundColor: 'rgba(139, 92, 246, 0.2)',
+        borderWidth: 3,
+        pointRadius: 6,
+        pointBackgroundColor: players.map(p => p.slg >= 0.450 ? '#10b981' : p.slg >= 0.350 ? '#f59e0b' : '#ef4444'),
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, labels: { color: getThemeColor('text-secondary') } }
+      },
+      scales: {
+        x: { ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } },
+        y: { beginAtZero: true, ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } }
+      }
+    }
+  });
+}
+
+/**
+ * ISO 純長打力圖表 (SLG - AVG)
+ */
+function renderISOChart() {
+  const batting = appState.data?.sheets?.batting?.data || [];
+  const ctx = document.getElementById('chart-iso');
+  if (!ctx) return;
+
+  const players = batting
+    .filter(b => b['姓名'] && getNumericField(b, '打數') > 0)
+    .map(b => {
+      const ab = getIntField(b, '打數');
+      const hits = getIntField(b, '安打');
+      const doubles = getIntField(b, '二壘打');
+      const triples = getIntField(b, '三壘打');
+      const hr = getIntField(b, '全壘打');
+      const avg = getNumericField(b, '打擊率') || 0;
+      const singles = Math.max(0, hits - doubles - triples - hr);
+      const slg = ab > 0 ? (singles + 2 * doubles + 3 * triples + 4 * hr) / ab : 0;
+      const iso = slg - avg;
+      return { name: b['姓名'], iso: iso, slg: slg, avg: avg };
+    })
+    .filter(p => p.iso > 0)
+    .sort((a, b) => b.iso - a.iso)
+    .slice(0, 10);
+
+  destroyChart('iso');
+
+  if (players.length === 0) {
+    ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無 ISO 資料</div>';
+    return;
+  }
+
+  Charts.iso = new Chart(ctx, {
+    type: 'line',
+    plugins: [crosshairPlugin],
+    data: {
+      labels: players.map(p => p.name),
+      datasets: [{
+        label: 'ISO (純長打力)',
+        data: players.map(p => parseFloat(p.iso.toFixed(3))),
+        borderColor: '#ec4899',
+        backgroundColor: 'rgba(236, 72, 153, 0.2)',
+        borderWidth: 3,
+        pointRadius: 6,
+        pointBackgroundColor: players.map(p => p.iso >= 0.200 ? '#10b981' : p.iso >= 0.120 ? '#f59e0b' : '#ef4444'),
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const p = players[ctx.dataIndex];
+              return `ISO: ${p.iso.toFixed(3)} (SLG: ${p.slg.toFixed(3)} - AVG: ${p.avg.toFixed(3)})`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } },
+        y: { beginAtZero: true, ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } }
+      }
+    }
+  });
+}
+
+/**
+ * 打席結果分布圖表 (團隊整體)
+ */
+function renderPAResultChart() {
+  const batting = appState.data?.sheets?.batting?.data || [];
+  const ctx = document.getElementById('chart-pa-result');
+  if (!ctx) return;
+
+  // 計算團隊整體打席結果
+  let totalHits = 0, totalK = 0, totalBB = 0, totalOuts = 0;
+  batting.forEach(b => {
+    const pa = getIntField(b, '打席');
+    const hits = getIntField(b, '安打');
+    const k = getIntField(b, '三振');
+    const bb = getIntField(b, '四壞球');
+    totalHits += hits;
+    totalK += k;
+    totalBB += bb;
+    // 其他出局 = 打席 - 安打 - 三振 - 四壞
+    totalOuts += Math.max(0, pa - hits - k - bb);
+  });
+
+  destroyChart('paResult');
+
+  const total = totalHits + totalK + totalBB + totalOuts;
+  if (total === 0) {
+    ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無打席資料</div>';
+    return;
+  }
+
+  Charts.paResult = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['安打', '三振', '四壞球', '其他出局'],
+      datasets: [{
+        data: [totalHits, totalK, totalBB, totalOuts],
+        backgroundColor: [
+          'rgba(16, 185, 129, 0.8)',  // 安打 - 綠
+          'rgba(239, 68, 68, 0.8)',   // 三振 - 紅
+          'rgba(59, 130, 246, 0.8)',  // 四壞 - 藍
+          'rgba(107, 114, 128, 0.8)'  // 其他 - 灰
+        ],
+        borderColor: [
+          '#10b981',
+          '#ef4444',
+          '#3b82f6',
+          '#6b7280'
+        ],
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { color: getThemeColor('text-secondary') } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const pct = ((ctx.raw / total) * 100).toFixed(1);
+              return `${ctx.label}: ${ctx.raw} (${pct}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+/**
+ * 三振率 (K%) 排行圖表
+ */
+function renderKPctChart() {
+  const batting = appState.data?.sheets?.batting?.data || [];
+  const ctx = document.getElementById('chart-k-pct');
+  if (!ctx) return;
+
+  const players = batting
+    .filter(b => b['姓名'] && getIntField(b, '打席') > 0)
+    .map(b => {
+      const pa = getIntField(b, '打席');
+      const k = getIntField(b, '三振');
+      const kPct = pa > 0 ? (k / pa) * 100 : 0;
+      return { name: b['姓名'], kPct: kPct, k: k, pa: pa };
+    })
+    .filter(p => p.pa >= 5)  // 至少 5 打席
+    .sort((a, b) => a.kPct - b.kPct)  // 三振率越低越好
+    .slice(0, 10);
+
+  destroyChart('kPct');
+
+  if (players.length === 0) {
+    ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無三振率資料</div>';
+    return;
+  }
+
+  Charts.kPct = new Chart(ctx, {
+    type: 'line',
+    plugins: [crosshairPlugin],
+    data: {
+      labels: players.map(p => p.name),
+      datasets: [{
+        label: '三振率 K%',
+        data: players.map(p => parseFloat(p.kPct.toFixed(1))),
+        borderColor: '#ef4444',
+        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+        borderWidth: 3,
+        pointRadius: 6,
+        pointBackgroundColor: players.map(p => p.kPct <= 15 ? '#10b981' : p.kPct <= 25 ? '#f59e0b' : '#ef4444'),
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const p = players[ctx.dataIndex];
+              return `K%: ${p.kPct.toFixed(1)}% (${p.k}K / ${p.pa}PA)`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } },
+        y: { beginAtZero: true, ticks: { color: getThemeColor('text-secondary'), callback: v => v + '%' }, grid: { color: getThemeColor('grid') } }
+      }
+    }
+  });
+}
+
+/**
+ * 保送率 (BB%) 排行圖表
+ */
+function renderBBPctChart() {
+  const batting = appState.data?.sheets?.batting?.data || [];
+  const ctx = document.getElementById('chart-bb-pct');
+  if (!ctx) return;
+
+  const players = batting
+    .filter(b => b['姓名'] && getIntField(b, '打席') > 0)
+    .map(b => {
+      const pa = getIntField(b, '打席');
+      const bb = getIntField(b, '四壞球');
+      const bbPct = pa > 0 ? (bb / pa) * 100 : 0;
+      return { name: b['姓名'], bbPct: bbPct, bb: bb, pa: pa };
+    })
+    .filter(p => p.pa >= 5)  // 至少 5 打席
+    .sort((a, b) => b.bbPct - a.bbPct)  // 保送率越高越好
+    .slice(0, 10);
+
+  destroyChart('bbPct');
+
+  if (players.length === 0) {
+    ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無保送率資料</div>';
+    return;
+  }
+
+  Charts.bbPct = new Chart(ctx, {
+    type: 'line',
+    plugins: [crosshairPlugin],
+    data: {
+      labels: players.map(p => p.name),
+      datasets: [{
+        label: '保送率 BB%',
+        data: players.map(p => parseFloat(p.bbPct.toFixed(1))),
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+        borderWidth: 3,
+        pointRadius: 6,
+        pointBackgroundColor: players.map(p => p.bbPct >= 12 ? '#10b981' : p.bbPct >= 8 ? '#f59e0b' : '#ef4444'),
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const p = players[ctx.dataIndex];
+              return `BB%: ${p.bbPct.toFixed(1)}% (${p.bb}BB / ${p.pa}PA)`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } },
+        y: { beginAtZero: true, ticks: { color: getThemeColor('text-secondary'), callback: v => v + '%' }, grid: { color: getThemeColor('grid') } }
+      }
+    }
+  });
+}
+
+/**
  * 投球局數排行圖表
  */
 function renderInningsChart() {
@@ -2600,6 +3051,275 @@ function renderPitcherRecordChart() {
       scales: {
         x: { ticks: { color: getThemeColor('text-secondary') } },
         y: { beginAtZero: true, ticks: { stepSize: 1, color: getThemeColor('text-secondary') } }
+      }
+    }
+  });
+}
+
+/**
+ * WHIP 排行圖表 (每局被上壘率)
+ */
+function renderWHIPChart() {
+  const pitching = appState.data?.sheets?.pitching?.data || [];
+  const ctx = document.getElementById('chart-whip');
+  if (!ctx) return;
+
+  // WHIP = (被安打 + 四壞球) / 投球局數
+  const pitchers = pitching
+    .filter(p => p['姓名'] && getNumericField(p, '投球局數') > 0)
+    .map(p => {
+      const ip = getNumericField(p, '投球局數');
+      const hits = getIntField(p, '被安打');
+      const bb = getIntField(p, '四壞球');
+      const whip = ip > 0 ? (hits + bb) / ip : 0;
+      return { name: p['姓名'], whip: whip, hits: hits, bb: bb, ip: ip };
+    })
+    .filter(p => p.ip > 0)
+    .sort((a, b) => a.whip - b.whip)  // WHIP 越低越好
+    .slice(0, 10);
+
+  destroyChart('whip');
+
+  if (pitchers.length === 0) {
+    ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無 WHIP 資料</div>';
+    return;
+  }
+
+  Charts.whip = new Chart(ctx, {
+    type: 'line',
+    plugins: [crosshairPlugin],
+    data: {
+      labels: pitchers.map(p => p.name),
+      datasets: [{
+        label: 'WHIP',
+        data: pitchers.map(p => parseFloat(p.whip.toFixed(2))),
+        borderColor: '#06b6d4',
+        backgroundColor: 'rgba(6, 182, 212, 0.2)',
+        borderWidth: 3,
+        pointRadius: 6,
+        pointBackgroundColor: pitchers.map(p => p.whip <= 1.0 ? '#10b981' : p.whip <= 1.3 ? '#f59e0b' : '#ef4444'),
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const p = pitchers[ctx.dataIndex];
+              return `WHIP: ${p.whip.toFixed(2)} (${p.hits}H + ${p.bb}BB) / ${p.ip}IP`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } },
+        y: { beginAtZero: true, ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } }
+      }
+    }
+  });
+}
+
+/**
+ * K/9 排行圖表 (每 9 局三振數)
+ */
+function renderK9Chart() {
+  const pitching = appState.data?.sheets?.pitching?.data || [];
+  const ctx = document.getElementById('chart-k9');
+  if (!ctx) return;
+
+  // K/9 = 三振 × 9 / 投球局數
+  const pitchers = pitching
+    .filter(p => p['姓名'] && getNumericField(p, '投球局數') > 0)
+    .map(p => {
+      const ip = getNumericField(p, '投球局數');
+      const k = getIntField(p, '三振');
+      const k9 = ip > 0 ? (k * 9) / ip : 0;
+      return { name: p['姓名'], k9: k9, k: k, ip: ip };
+    })
+    .filter(p => p.ip > 0)
+    .sort((a, b) => b.k9 - a.k9)  // K/9 越高越好
+    .slice(0, 10);
+
+  destroyChart('k9');
+
+  if (pitchers.length === 0) {
+    ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無 K/9 資料</div>';
+    return;
+  }
+
+  Charts.k9 = new Chart(ctx, {
+    type: 'line',
+    plugins: [crosshairPlugin],
+    data: {
+      labels: pitchers.map(p => p.name),
+      datasets: [{
+        label: 'K/9',
+        data: pitchers.map(p => parseFloat(p.k9.toFixed(2))),
+        borderColor: '#ef4444',
+        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+        borderWidth: 3,
+        pointRadius: 6,
+        pointBackgroundColor: pitchers.map(p => p.k9 >= 9 ? '#10b981' : p.k9 >= 6 ? '#f59e0b' : '#ef4444'),
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const p = pitchers[ctx.dataIndex];
+              return `K/9: ${p.k9.toFixed(2)} (${p.k}K / ${p.ip}IP × 9)`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } },
+        y: { beginAtZero: true, ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } }
+      }
+    }
+  });
+}
+
+/**
+ * BB/9 排行圖表 (每 9 局保送數)
+ */
+function renderBB9Chart() {
+  const pitching = appState.data?.sheets?.pitching?.data || [];
+  const ctx = document.getElementById('chart-bb9');
+  if (!ctx) return;
+
+  // BB/9 = 四壞球 × 9 / 投球局數
+  const pitchers = pitching
+    .filter(p => p['姓名'] && getNumericField(p, '投球局數') > 0)
+    .map(p => {
+      const ip = getNumericField(p, '投球局數');
+      const bb = getIntField(p, '四壞球');
+      const bb9 = ip > 0 ? (bb * 9) / ip : 0;
+      return { name: p['姓名'], bb9: bb9, bb: bb, ip: ip };
+    })
+    .filter(p => p.ip > 0)
+    .sort((a, b) => a.bb9 - b.bb9)  // BB/9 越低越好
+    .slice(0, 10);
+
+  destroyChart('bb9');
+
+  if (pitchers.length === 0) {
+    ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無 BB/9 資料</div>';
+    return;
+  }
+
+  Charts.bb9 = new Chart(ctx, {
+    type: 'line',
+    plugins: [crosshairPlugin],
+    data: {
+      labels: pitchers.map(p => p.name),
+      datasets: [{
+        label: 'BB/9',
+        data: pitchers.map(p => parseFloat(p.bb9.toFixed(2))),
+        borderColor: '#f59e0b',
+        backgroundColor: 'rgba(245, 158, 11, 0.2)',
+        borderWidth: 3,
+        pointRadius: 6,
+        pointBackgroundColor: pitchers.map(p => p.bb9 <= 2 ? '#10b981' : p.bb9 <= 4 ? '#f59e0b' : '#ef4444'),
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const p = pitchers[ctx.dataIndex];
+              return `BB/9: ${p.bb9.toFixed(2)} (${p.bb}BB / ${p.ip}IP × 9)`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } },
+        y: { beginAtZero: true, ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } }
+      }
+    }
+  });
+}
+
+/**
+ * K/BB 比率排行圖表
+ */
+function renderKBBRatioChart() {
+  const pitching = appState.data?.sheets?.pitching?.data || [];
+  const ctx = document.getElementById('chart-kbb-ratio');
+  if (!ctx) return;
+
+  // K/BB = 三振 / 四壞球
+  const pitchers = pitching
+    .filter(p => p['姓名'] && getIntField(p, '四壞球') > 0)
+    .map(p => {
+      const k = getIntField(p, '三振');
+      const bb = getIntField(p, '四壞球');
+      const kbbRatio = bb > 0 ? k / bb : 0;
+      return { name: p['姓名'], kbbRatio: kbbRatio, k: k, bb: bb };
+    })
+    .filter(p => p.kbbRatio > 0)
+    .sort((a, b) => b.kbbRatio - a.kbbRatio)  // K/BB 越高越好
+    .slice(0, 10);
+
+  destroyChart('kbbRatio');
+
+  if (pitchers.length === 0) {
+    ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無 K/BB 資料</div>';
+    return;
+  }
+
+  Charts.kbbRatio = new Chart(ctx, {
+    type: 'line',
+    plugins: [crosshairPlugin],
+    data: {
+      labels: pitchers.map(p => p.name),
+      datasets: [{
+        label: 'K/BB 比率',
+        data: pitchers.map(p => parseFloat(p.kbbRatio.toFixed(2))),
+        borderColor: '#8b5cf6',
+        backgroundColor: 'rgba(139, 92, 246, 0.2)',
+        borderWidth: 3,
+        pointRadius: 6,
+        pointBackgroundColor: pitchers.map(p => p.kbbRatio >= 3 ? '#10b981' : p.kbbRatio >= 2 ? '#f59e0b' : '#ef4444'),
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const p = pitchers[ctx.dataIndex];
+              return `K/BB: ${p.kbbRatio.toFixed(2)} (${p.k}K / ${p.bb}BB)`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } },
+        y: { beginAtZero: true, ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } }
       }
     }
   });
@@ -2741,6 +3461,155 @@ function renderDefenseValueChart() {
 }
 
 /**
+ * 守位守備率比較圖表
+ */
+function renderPosFieldingChart() {
+  const fielding = appState.data?.sheets?.fielding?.data || [];
+  const ctx = document.getElementById('chart-pos-fielding');
+  if (!ctx) return;
+
+  // 依守位分組計算平均守備率
+  const positionStats = {};
+  fielding.forEach(f => {
+    const pos = getField(f, '守位');
+    const fpct = getNumericField(f, '守備率');
+    if (pos && fpct > 0) {
+      if (!positionStats[pos]) {
+        positionStats[pos] = { total: 0, count: 0 };
+      }
+      positionStats[pos].total += fpct;
+      positionStats[pos].count++;
+    }
+  });
+
+  const positions = Object.keys(positionStats)
+    .map(pos => ({
+      pos: pos,
+      avgFpct: positionStats[pos].total / positionStats[pos].count,
+      count: positionStats[pos].count
+    }))
+    .sort((a, b) => b.avgFpct - a.avgFpct);
+
+  destroyChart('posFielding');
+
+  if (positions.length === 0) {
+    ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無守位資料</div>';
+    return;
+  }
+
+  Charts.posFielding = new Chart(ctx, {
+    type: 'line',
+    plugins: [crosshairPlugin],
+    data: {
+      labels: positions.map(p => p.pos),
+      datasets: [{
+        label: '平均守備率',
+        data: positions.map(p => parseFloat(p.avgFpct.toFixed(3))),
+        borderColor: '#f59e0b',
+        backgroundColor: 'rgba(245, 158, 11, 0.2)',
+        borderWidth: 3,
+        pointRadius: 6,
+        pointBackgroundColor: positions.map(p => p.avgFpct >= 0.950 ? '#10b981' : p.avgFpct >= 0.900 ? '#f59e0b' : '#ef4444'),
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const p = positions[ctx.dataIndex];
+              return `守備率: ${p.avgFpct.toFixed(3)} (${p.count}人)`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } },
+        y: {
+          min: 0.7,
+          max: 1.0,
+          ticks: { color: getThemeColor('text-secondary') },
+          grid: { color: getThemeColor('grid') }
+        }
+      }
+    }
+  });
+}
+
+/**
+ * Range Factor 排行圖表 (守備範圍)
+ */
+function renderRangeFactorChart() {
+  const fielding = appState.data?.sheets?.fielding?.data || [];
+  const ctx = document.getElementById('chart-range-factor');
+  if (!ctx) return;
+
+  // Range Factor = (刺殺 + 助殺) / 出賽
+  const players = fielding
+    .filter(f => f['姓名'] && getIntField(f, '出賽') > 0)
+    .map(f => {
+      const games = getIntField(f, '出賽');
+      const po = getIntField(f, '刺殺');
+      const a = getIntField(f, '助殺');
+      const rf = games > 0 ? (po + a) / games : 0;
+      return { name: f['姓名'], rf: rf, po: po, a: a, games: games };
+    })
+    .filter(p => p.rf > 0)
+    .sort((a, b) => b.rf - a.rf)
+    .slice(0, 10);
+
+  destroyChart('rangeFactor');
+
+  if (players.length === 0) {
+    ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無守備範圍資料</div>';
+    return;
+  }
+
+  Charts.rangeFactor = new Chart(ctx, {
+    type: 'line',
+    plugins: [crosshairPlugin],
+    data: {
+      labels: players.map(p => p.name),
+      datasets: [{
+        label: 'Range Factor',
+        data: players.map(p => parseFloat(p.rf.toFixed(2))),
+        borderColor: '#06b6d4',
+        backgroundColor: 'rgba(6, 182, 212, 0.2)',
+        borderWidth: 3,
+        pointRadius: 6,
+        pointBackgroundColor: '#06b6d4',
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const p = players[ctx.dataIndex];
+              return `RF: ${p.rf.toFixed(2)} (${p.po}PO + ${p.a}A) / ${p.games}G`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } },
+        y: { beginAtZero: true, ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } }
+      }
+    }
+  });
+}
+
+/**
  * 各場比賽得分對比圖表
  */
 function renderGameScoresChart() {
@@ -2855,6 +3724,237 @@ function renderTeamOffenseChart() {
           grid: { color: getThemeColor('grid') },
           pointLabels: { color: getThemeColor('text-secondary') }
         }
+      }
+    }
+  });
+}
+
+/**
+ * 對手戰績分析圖表
+ */
+function renderOpponentChart() {
+  const games = appState.data?.sheets?.games?.data || [];
+  const ctx = document.getElementById('chart-opponent');
+  if (!ctx) return;
+
+  // 依對手分組統計
+  const opponentStats = {};
+  games.forEach(g => {
+    const opp = getField(g, '對手');
+    if (!opp) return;
+
+    const ourScore = getIntField(g, '我方得分');
+    const theirScore = getIntField(g, '對方得分');
+
+    if (!opponentStats[opp]) {
+      opponentStats[opp] = { wins: 0, losses: 0, ties: 0, runsFor: 0, runsAgainst: 0 };
+    }
+
+    opponentStats[opp].runsFor += ourScore;
+    opponentStats[opp].runsAgainst += theirScore;
+
+    if (ourScore > theirScore) {
+      opponentStats[opp].wins++;
+    } else if (ourScore < theirScore) {
+      opponentStats[opp].losses++;
+    } else {
+      opponentStats[opp].ties++;
+    }
+  });
+
+  const opponents = Object.keys(opponentStats)
+    .map(opp => ({
+      name: opp,
+      ...opponentStats[opp],
+      games: opponentStats[opp].wins + opponentStats[opp].losses + opponentStats[opp].ties
+    }))
+    .sort((a, b) => b.games - a.games)
+    .slice(0, 8);
+
+  destroyChart('opponent');
+
+  if (opponents.length === 0) {
+    ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無對手戰績資料</div>';
+    return;
+  }
+
+  Charts.opponent = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: opponents.map(o => o.name),
+      datasets: [
+        {
+          label: '勝',
+          data: opponents.map(o => o.wins),
+          backgroundColor: 'rgba(16, 185, 129, 0.8)',
+          borderColor: '#10b981',
+          borderWidth: 1
+        },
+        {
+          label: '敗',
+          data: opponents.map(o => o.losses),
+          backgroundColor: 'rgba(239, 68, 68, 0.8)',
+          borderColor: '#ef4444',
+          borderWidth: 1
+        },
+        {
+          label: '和',
+          data: opponents.map(o => o.ties),
+          backgroundColor: 'rgba(107, 114, 128, 0.8)',
+          borderColor: '#6b7280',
+          borderWidth: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { color: getThemeColor('text-secondary') } },
+        tooltip: {
+          callbacks: {
+            afterBody: (ctx) => {
+              const o = opponents[ctx[0].dataIndex];
+              return `得分: ${o.runsFor} | 失分: ${o.runsAgainst}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { stacked: true, ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } },
+        y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1, color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } }
+      }
+    }
+  });
+}
+
+/**
+ * 得分效率排行圖表 (得分/出賽)
+ */
+function renderRunsEffChart() {
+  const batting = appState.data?.sheets?.batting?.data || [];
+  const ctx = document.getElementById('chart-runs-eff');
+  if (!ctx) return;
+
+  const players = batting
+    .filter(b => b['姓名'] && getIntField(b, '出賽') > 0)
+    .map(b => {
+      const games = getIntField(b, '出賽');
+      const runs = getIntField(b, '得分');
+      const eff = games > 0 ? runs / games : 0;
+      return { name: b['姓名'], eff: eff, runs: runs, games: games };
+    })
+    .filter(p => p.runs > 0)
+    .sort((a, b) => b.eff - a.eff)
+    .slice(0, 10);
+
+  destroyChart('runsEff');
+
+  if (players.length === 0) {
+    ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無得分效率資料</div>';
+    return;
+  }
+
+  Charts.runsEff = new Chart(ctx, {
+    type: 'line',
+    plugins: [crosshairPlugin],
+    data: {
+      labels: players.map(p => p.name),
+      datasets: [{
+        label: '得分效率 (得分/出賽)',
+        data: players.map(p => parseFloat(p.eff.toFixed(2))),
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+        borderWidth: 3,
+        pointRadius: 6,
+        pointBackgroundColor: '#10b981',
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const p = players[ctx.dataIndex];
+              return `效率: ${p.eff.toFixed(2)} (${p.runs}R / ${p.games}G)`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } },
+        y: { beginAtZero: true, ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } }
+      }
+    }
+  });
+}
+
+/**
+ * 打點效率排行圖表 (打點/出賽)
+ */
+function renderRbiEffChart() {
+  const batting = appState.data?.sheets?.batting?.data || [];
+  const ctx = document.getElementById('chart-rbi-eff');
+  if (!ctx) return;
+
+  const players = batting
+    .filter(b => b['姓名'] && getIntField(b, '出賽') > 0)
+    .map(b => {
+      const games = getIntField(b, '出賽');
+      const rbi = getIntField(b, '打點');
+      const eff = games > 0 ? rbi / games : 0;
+      return { name: b['姓名'], eff: eff, rbi: rbi, games: games };
+    })
+    .filter(p => p.rbi > 0)
+    .sort((a, b) => b.eff - a.eff)
+    .slice(0, 10);
+
+  destroyChart('rbiEff');
+
+  if (players.length === 0) {
+    ctx.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-text-secondary">尚無打點效率資料</div>';
+    return;
+  }
+
+  Charts.rbiEff = new Chart(ctx, {
+    type: 'line',
+    plugins: [crosshairPlugin],
+    data: {
+      labels: players.map(p => p.name),
+      datasets: [{
+        label: '打點效率 (打點/出賽)',
+        data: players.map(p => parseFloat(p.eff.toFixed(2))),
+        borderColor: '#f59e0b',
+        backgroundColor: 'rgba(245, 158, 11, 0.2)',
+        borderWidth: 3,
+        pointRadius: 6,
+        pointBackgroundColor: '#f59e0b',
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, labels: { color: getThemeColor('text-secondary') } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const p = players[ctx.dataIndex];
+              return `效率: ${p.eff.toFixed(2)} (${p.rbi}RBI / ${p.games}G)`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } },
+        y: { beginAtZero: true, ticks: { color: getThemeColor('text-secondary') }, grid: { color: getThemeColor('grid') } }
       }
     }
   });
