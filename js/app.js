@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.1.8 - 修復 bar chart NaN 問題 (移除 scale 限制)
+// 版本: 2.1.9 - 測試 stacked mode 修復 grouped bar chart NaN 問題
 // ============================================================
 
 // API 基礎 URL
@@ -1333,8 +1333,12 @@ function destroyChart(chartName) {
  * 打擊率 vs 上壘率圖表
  */
 function renderBattingOBPChart() {
+  console.log('[OBP] 開始渲染 (stacked 測試)');
   const batting = appState.data?.sheets?.batting?.data || [];
-  if (batting.length === 0) return;
+  if (batting.length === 0) {
+    console.log('[OBP] 無資料');
+    return;
+  }
 
   // 取前 8 名有打擊率的球員
   const sorted = [...batting]
@@ -1342,61 +1346,79 @@ function renderBattingOBPChart() {
     .sort((a, b) => getNumericField(b, '打擊率') - getNumericField(a, '打擊率'))
     .slice(0, 8);
 
-  if (sorted.length === 0) return;
+  if (sorted.length === 0) {
+    console.log('[OBP] 過濾後無資料');
+    return;
+  }
+
+  console.log('[OBP] 球員數:', sorted.length);
 
   const labels = sorted.map(b => getField(b, '姓名') || '未知');
   const avgData = sorted.map(b => getNumericField(b, '打擊率'));
   const obpData = sorted.map(b => getNumericField(b, '上壘率'));
 
+  console.log('[OBP] avgData:', avgData);
+  console.log('[OBP] obpData:', obpData);
+
   destroyChart('battingOBP');
 
   const ctx = document.getElementById('chart-batting-obp');
-  if (!ctx) return;
+  if (!ctx) {
+    console.log('[OBP] 找不到 canvas');
+    return;
+  }
 
-  Charts.battingOBP = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: '打擊率 AVG',
-          data: avgData,
-          backgroundColor: 'rgba(88, 166, 255, 0.8)',
-          borderColor: 'rgba(88, 166, 255, 1)',
-          borderWidth: 1
-        },
-        {
-          label: '上壘率 OBP',
-          data: obpData,
-          backgroundColor: 'rgba(139, 92, 246, 0.8)',
-          borderColor: 'rgba(139, 92, 246, 1)',
-          borderWidth: 1
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          labels: { color: '#9ca3af' }
-        }
+  try {
+    Charts.battingOBP = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: '打擊率 AVG',
+            data: avgData,
+            backgroundColor: 'rgba(88, 166, 255, 0.8)',
+            borderColor: 'rgba(88, 166, 255, 1)',
+            borderWidth: 1
+          },
+          {
+            label: '上壘率 OBP',
+            data: obpData,
+            backgroundColor: 'rgba(139, 92, 246, 0.8)',
+            borderColor: 'rgba(139, 92, 246, 1)',
+            borderWidth: 1
+          }
+        ]
       },
-      scales: {
-        x: {
-          ticks: { color: '#9ca3af' },
-          grid: { color: 'rgba(55, 65, 81, 0.5)' }
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: { color: '#9ca3af' }
+          }
         },
-        y: {
-          beginAtZero: true,
-          ticks: { color: '#9ca3af' },
-          grid: { color: 'rgba(55, 65, 81, 0.5)' }
+        scales: {
+          x: {
+            stacked: true,
+            ticks: { color: '#9ca3af' },
+            grid: { color: 'rgba(55, 65, 81, 0.5)' }
+          },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            ticks: { color: '#9ca3af' },
+            grid: { color: 'rgba(55, 65, 81, 0.5)' }
+          }
         }
       }
-    }
-  });
+    });
+    console.log('[OBP] 圖表創建成功 (stacked mode)');
+  } catch (err) {
+    console.error('[OBP] 創建失敗:', err);
+  }
 }
 
 /**
