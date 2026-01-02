@@ -1445,64 +1445,51 @@ function renderBattingOBPChart() {
     return;
   }
 
-  Charts.battingOBP = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: '打擊率 AVG',
-          data: avgData,
-          backgroundColor: '#ef4444',  // 鮮紅色測試
-          borderColor: '#dc2626',
-          borderWidth: 2,
-          barThickness: 20
-        },
-        {
-          label: '上壘率 OBP',
-          data: obpData,
-          backgroundColor: '#22c55e',  // 鮮綠色測試
-          borderColor: '#16a34a',
-          borderWidth: 2,
-          barThickness: 20
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'top',
-          labels: { color: '#f3f4f6' }
-        }
-        // 暫時移除 zoom 插件測試
-        // ...getChartZoomConfig()
+  // 調試：檢查 Chart.js
+  console.log('=== 打擊率圖表調試 ===');
+  console.log('1. Chart.js 載入:', typeof Chart !== 'undefined' ? '是' : '否');
+  console.log('2. Chart.js 版本:', typeof Chart !== 'undefined' ? Chart.version : 'N/A');
+  console.log('3. Canvas 元素:', ctx);
+  console.log('4. Canvas 父容器尺寸:', ctx.parentElement.offsetWidth, 'x', ctx.parentElement.offsetHeight);
+  console.log('5. Labels:', labels);
+  console.log('6. Data:', avgData);
+
+  // 硬編碼測試數據
+  const testLabels = ['A', 'B', 'C', 'D'];
+  const testData = [0.5, 0.3, 0.7, 0.4];
+
+  try {
+    Charts.battingOBP = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: testLabels,  // 使用硬編碼測試數據
+        datasets: [{
+          label: '測試數據',
+          data: testData,     // 使用硬編碼測試數據
+          backgroundColor: ['red', 'blue', 'green', 'orange']
+        }]
       },
-      scales: {
-        x: {
-          ticks: { color: '#9ca3af' },
-          grid: { color: 'rgba(55, 65, 81, 0.5)' }
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: true }
         },
-        y: {
-          beginAtZero: true,
-          max: 1,
-          ticks: {
-            color: '#9ca3af',
-            callback: v => v.toFixed(2)
-          },
-          grid: { color: 'rgba(55, 65, 81, 0.5)' }
+        scales: {
+          y: { beginAtZero: true, max: 1 }
         }
       }
-    }
-  });
+    });
 
-  console.log('打擊率圖表 - Chart 創建成功:', Charts.battingOBP ? '是' : '否');
-  console.log('打擊率圖表 - Canvas 尺寸:', ctx.width, 'x', ctx.height);
-  console.log('打擊率圖表 - Chart data:', Charts.battingOBP.data);
+    console.log('7. Chart 創建:', Charts.battingOBP ? '成功' : '失敗');
+    console.log('8. Chart canvas:', Charts.battingOBP.canvas);
+    console.log('9. Chart width:', Charts.battingOBP.width);
+    console.log('10. Chart height:', Charts.battingOBP.height);
+    console.log('=== 調試結束 ===');
 
-  // 強制重繪
-  Charts.battingOBP.update();
+  } catch (error) {
+    console.error('Chart 創建錯誤:', error);
+    console.error('錯誤堆疊:', error.stack);
+  }
 
   // 雙擊重置縮放
   ctx.ondblclick = () => resetChartZoom(Charts.battingOBP);
