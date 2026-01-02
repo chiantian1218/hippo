@@ -6,30 +6,31 @@
 
 /* ===== CSS 變數定義 ===== */
 :root {
-  /* 深色主題背景 (預設) */
-  --bg-primary: #0a0f1a;
-  --bg-secondary: #111827;
-  --bg-tertiary: #1f2937;
-  --border-color: #374151;
+  /* 深色主題背景 (預設) - 沉穩深藍色調 */
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  --border-color: #30363d;
 
-  /* 科技藍漸層 */
-  --gradient-tech: linear-gradient(135deg, #00d4ff 0%, #8b5cf6 100%);
-  --gradient-card: linear-gradient(180deg, rgba(17,24,39,1) 0%, rgba(31,41,55,1) 100%);
+  /* 簡化漸層 - 移除過多顏色 */
+  --gradient-tech: linear-gradient(135deg, #58a6ff 0%, #388bfd 100%);
+  --gradient-card: linear-gradient(180deg, rgba(22,27,34,1) 0%, rgba(33,38,45,1) 100%);
 
-  /* 呼吸燈效果 */
-  --glow-blue: 0 0 20px rgba(0, 212, 255, 0.5);
-  --glow-purple: 0 0 20px rgba(139, 92, 246, 0.5);
+  /* 呼吸燈效果 - 更柔和 */
+  --glow-blue: 0 0 16px rgba(88, 166, 255, 0.4);
+  --glow-purple: 0 0 16px rgba(88, 166, 255, 0.3);
 
-  /* 顏色變數 */
-  --tech-blue: #00d4ff;
-  --tech-blue-dim: #0891b2;
-  --tech-purple: #8b5cf6;
-  --success: #10b981;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --text-primary: #f3f4f6;
-  --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
+  /* 顏色變數 - 統一為簡約藍色系 */
+  --tech-blue: #58a6ff;
+  --tech-blue-dim: #388bfd;
+  --tech-purple: #8b949e;
+  --accent: #58a6ff;
+  --success: #3fb950;
+  --warning: #d29922;
+  --danger: #f85149;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #6e7681;
 
   /* 排版變數 */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans TC', sans-serif;
@@ -112,20 +113,42 @@ body {
 .icon-warning { stroke: var(--warning); }
 .icon-danger { stroke: var(--danger); }
 
-/* ===== 呼吸燈動畫 ===== */
-@keyframes pulse-glow {
+/* ===== 呼吸燈動畫 (深色主題) - 柔和藍光 ===== */
+@keyframes pulse-glow-dark {
   0%, 100% {
-    filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.4));
+    filter: drop-shadow(0 0 4px rgba(88, 166, 255, 0.5))
+            drop-shadow(0 0 12px rgba(88, 166, 255, 0.3));
     transform: scale(1);
   }
   50% {
-    filter: drop-shadow(0 0 20px rgba(0, 212, 255, 0.8));
+    filter: drop-shadow(0 0 8px rgba(88, 166, 255, 0.8))
+            drop-shadow(0 0 20px rgba(88, 166, 255, 0.5))
+            drop-shadow(0 0 32px rgba(88, 166, 255, 0.3));
+    transform: scale(1.05);
+  }
+}
+
+/* ===== 呼吸燈動畫 (淺色主題) ===== */
+@keyframes pulse-glow-light {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px rgba(56, 139, 253, 0.4))
+            drop-shadow(0 0 12px rgba(56, 139, 253, 0.2));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(56, 139, 253, 0.6))
+            drop-shadow(0 0 20px rgba(56, 139, 253, 0.4));
     transform: scale(1.05);
   }
 }
 
 .logo-breathing {
-  animation: pulse-glow 2.5s ease-in-out infinite;
+  animation: pulse-glow-dark 2.5s ease-in-out infinite;
+  color: var(--tech-blue);
+}
+
+[data-theme="light"] .logo-breathing {
+  animation: pulse-glow-light 2.5s ease-in-out infinite;
   color: var(--tech-blue);
 }
 
@@ -630,8 +653,10 @@ select:focus {
 }
 
 /* ===== 淺色主題 Tailwind 覆蓋 ===== */
+
+/* 基底背景 */
 [data-theme="light"] body,
-[data-theme="light"].bg-dark-bg {
+[data-theme="light"] .bg-dark-bg {
   background-color: var(--bg-primary) !important;
   color: var(--text-primary) !important;
 }
@@ -648,6 +673,7 @@ select:focus {
   border-color: var(--border-color) !important;
 }
 
+/* 文字顏色覆蓋 */
 [data-theme="light"] .text-text-primary {
   color: var(--text-primary) !important;
 }
@@ -666,6 +692,132 @@ select:focus {
 
 [data-theme="light"] .text-tech-purple {
   color: var(--tech-purple) !important;
+}
+
+/* 淺色主題: 灰色文字覆蓋 (關鍵修復) */
+[data-theme="light"] .text-gray-100,
+[data-theme="light"] .text-gray-200 {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .text-gray-300,
+[data-theme="light"] .text-gray-400 {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="light"] .text-gray-500,
+[data-theme="light"] .text-gray-600 {
+  color: var(--text-muted) !important;
+}
+
+/* 淺色主題: 輸入框與表單 */
+[data-theme="light"] input,
+[data-theme="light"] textarea,
+[data-theme="light"] select {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder {
+  color: var(--text-muted) !important;
+}
+
+/* 淺色主題: 下拉選單 */
+[data-theme="light"] select option {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* 淺色主題: 對話區域 */
+[data-theme="light"] #conversation-area {
+  background-color: var(--bg-tertiary) !important;
+}
+
+[data-theme="light"] #conversation-area > div {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* 淺色主題: 球員列表 */
+[data-theme="light"] #player-list > div {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="light"] #player-list > div:hover {
+  background-color: var(--bg-tertiary) !important;
+}
+
+/* 淺色主題: 統計卡片 */
+[data-theme="light"] #team-stats > div {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* 淺色主題: Modal */
+[data-theme="light"] #player-modal > div > div {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* 淺色主題: 按鈕修復 */
+[data-theme="light"] .btn-glow {
+  background-color: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="light"] .btn-glow:hover {
+  border-color: var(--tech-blue) !important;
+}
+
+/* 淺色主題: 快速分析按鈕 */
+[data-theme="light"] .quick-analyze-btn {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* 淺色主題: 圖表 Tab */
+[data-theme="light"] .chart-tab {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="light"] .chart-tab:hover {
+  background-color: var(--bg-tertiary) !important;
+}
+
+[data-theme="light"] .chart-tab.active {
+  color: var(--tech-blue) !important;
+}
+
+/* 淺色主題: 手機版底部導航 */
+[data-theme="light"] #mobile-tab-nav {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="light"] .mobile-tab {
+  color: var(--text-muted) !important;
+}
+
+[data-theme="light"] .mobile-tab.active {
+  color: var(--tech-blue) !important;
+}
+
+/* 淺色主題: 捲動條 */
+[data-theme="light"] ::-webkit-scrollbar-track {
+  background: var(--bg-tertiary) !important;
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: var(--border-color) !important;
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted) !important;
 }
 
 [data-theme="light"] .from-tech-blue {
