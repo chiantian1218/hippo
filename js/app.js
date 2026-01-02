@@ -1496,11 +1496,13 @@ function renderBattingOBPChart() {
         },
         scales: {
           x: {
+            type: 'category',
             ticks: { color: '#9ca3af' },
             grid: { color: 'rgba(55, 65, 81, 0.5)' }
           },
           y: {
-            beginAtZero: true,
+            type: 'linear',
+            min: 0,
             max: 1,
             ticks: {
               color: '#9ca3af',
@@ -1529,13 +1531,19 @@ function renderBattingOBPChart() {
 
     // 檢查渲染後的狀態
     const meta = Charts.battingOBP.getDatasetMeta(0);
-    console.log('Meta data:', meta);
-    console.log('Bar elements:', meta.data);
     if (meta.data.length > 0) {
-      console.log('第一個 bar 元素:', meta.data[0]);
-      console.log('第一個 bar x:', meta.data[0].x, 'y:', meta.data[0].y);
-      console.log('第一個 bar width:', meta.data[0].width, 'height:', meta.data[0].height);
+      const bar = meta.data[0];
+      console.log('Bar 元素詳情:');
+      console.log('  x:', bar.x, 'y:', bar.y);
+      console.log('  width:', bar.width, 'height:', bar.height);
+      console.log('  base:', bar.base);
+      console.log('  全部屬性:', bar);
     }
+
+    // 檢查 Y 軸
+    const yScale = Charts.battingOBP.scales.y;
+    console.log('Y 軸:', yScale);
+    console.log('Y 軸 min:', yScale.min, 'max:', yScale.max);
 
   } catch (error) {
     console.error('Chart 創建錯誤:', error);
