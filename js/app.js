@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.1.2 - 診斷 bar 元素 + zoom plugin 狀態
+// 版本: 2.1.3 - 診斷 Y scale getPixelForValue
 // ============================================================
 
 // API 基礎 URL
@@ -1415,15 +1415,21 @@ function renderBattingOBPChart() {
   });
     console.log('[OBP] 圖表創建成功');
 
-    // 檢查 bar 元素
+    // 檢查 scale 和 bar 元素
     setTimeout(() => {
-      const meta = Charts.battingOBP.getDatasetMeta(0);
+      const chart = Charts.battingOBP;
+      const yScale = chart.scales.y;
+      console.log('[OBP] Y Scale:', yScale);
+      console.log('[OBP] Y getPixelForValue(0):', yScale.getPixelForValue(0));
+      console.log('[OBP] Y getPixelForValue(0.5):', yScale.getPixelForValue(0.5));
+      console.log('[OBP] Y getPixelForValue(1):', yScale.getPixelForValue(1));
+
+      const meta = chart.getDatasetMeta(0);
       if (meta.data[0]) {
         const bar = meta.data[0];
         console.log('[OBP] Bar 0:', 'height=' + bar.height, 'base=' + bar.base, 'y=' + bar.y);
+        console.log('[OBP] Bar 0 $context:', bar.$context);
       }
-      // 檢查是否有 zoom plugin
-      console.log('[OBP] Chart 有 resetZoom?', !!Charts.battingOBP.resetZoom);
     }, 50);
   } catch (err) {
     console.error('[OBP] 創建失敗:', err);
