@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.2.5 - 長打分布 dataset 順序調整測試
+// 版本: 2.2.6 - 長打分布加入隱形底層解決 Chart.js bug
 // ============================================================
 
 // API 基礎 URL
@@ -1509,17 +1509,19 @@ function renderExtraBaseChart() {
       labels: labels,
       datasets: [
         {
-          label: '全壘打',
-          data: homersData,
-          backgroundColor: 'rgba(239, 68, 68, 0.8)',
-          borderColor: '#ef4444',
-          borderWidth: 1
+          // 隱形底層，解決 Chart.js stacked bar 第一個 dataset 為 0 時不渲染的 bug
+          label: '',
+          data: labels.map(() => 0.01),
+          backgroundColor: 'transparent',
+          borderColor: 'transparent',
+          borderWidth: 0,
+          barPercentage: 1
         },
         {
-          label: '三壘打',
-          data: triplesData,
-          backgroundColor: 'rgba(16, 185, 129, 0.8)',
-          borderColor: '#10b981',
+          label: '一壘打',
+          data: singlesData,
+          backgroundColor: 'rgba(251, 191, 36, 0.8)',
+          borderColor: '#fbbf24',
           borderWidth: 1
         },
         {
@@ -1530,10 +1532,17 @@ function renderExtraBaseChart() {
           borderWidth: 1
         },
         {
-          label: '一壘打',
-          data: singlesData,
-          backgroundColor: 'rgba(251, 191, 36, 0.8)',
-          borderColor: '#fbbf24',
+          label: '三壘打',
+          data: triplesData,
+          backgroundColor: 'rgba(16, 185, 129, 0.8)',
+          borderColor: '#10b981',
+          borderWidth: 1
+        },
+        {
+          label: '全壘打',
+          data: homersData,
+          backgroundColor: 'rgba(239, 68, 68, 0.8)',
+          borderColor: '#ef4444',
           borderWidth: 1
         }
       ]
@@ -1544,7 +1553,13 @@ function renderExtraBaseChart() {
       plugins: {
         legend: {
           position: 'top',
-          labels: { color: '#9ca3af' }
+          labels: {
+            color: '#9ca3af',
+            filter: (item) => item.text !== ''
+          }
+        },
+        tooltip: {
+          filter: (item) => item.dataset.label !== ''
         }
       },
       scales: {
