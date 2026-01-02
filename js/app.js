@@ -1,6 +1,6 @@
 // ============================================================
 // 泰山河馬棒球分析系統 - 前端邏輯
-// 版本: 2.0.1 - 修復圖表 bar height NaN 問題 (移除全域 zoom plugin 註冊)
+// 版本: 2.0.2 - 診斷打擊率圖表問題
 // ============================================================
 
 // API 基礎 URL
@@ -1364,7 +1364,22 @@ function destroyChart(chartName) {
  */
 function renderBattingOBPChart() {
   const batting = appState.data?.sheets?.batting?.data || [];
-  if (batting.length === 0) return;
+  if (batting.length === 0) {
+    console.warn('[打擊率圖表] 無打擊資料');
+    return;
+  }
+
+  // 診斷：顯示第一筆資料的欄位和打擊率值
+  console.log('[打擊率圖表] 資料筆數:', batting.length);
+  console.log('[打擊率圖表] 欄位名稱:', Object.keys(batting[0]));
+  console.log('[打擊率圖表] 第一筆原始資料:', batting[0]);
+
+  // 診斷：測試前 3 筆的打擊率取值
+  batting.slice(0, 3).forEach((b, i) => {
+    const rawValue = getField(b, '打擊率');
+    const numValue = getNumericField(b, '打擊率');
+    console.log(`[打擊率圖表] 球員${i+1}: 原始值="${rawValue}", 數值=${numValue}`);
+  });
 
   // 取前 8 名有打擊率的球員 (使用安全取值函數)
   const sorted = [...batting]
@@ -1372,7 +1387,12 @@ function renderBattingOBPChart() {
     .sort((a, b) => getNumericField(b, '打擊率') - getNumericField(a, '打擊率'))
     .slice(0, 8);
 
-  if (sorted.length === 0) return;
+  console.log('[打擊率圖表] 過濾後球員數:', sorted.length);
+
+  if (sorted.length === 0) {
+    console.warn('[打擊率圖表] 過濾後無資料，可能欄位名稱不匹配或所有打擊率為0');
+    return;
+  }
 
   const labels = sorted.map(b => getField(b, '姓名') || '未知');
   const avgData = sorted.map(b => getNumericField(b, '打擊率'));
